@@ -1,0 +1,10 @@
+# FOLDERS
+__pycache__
+.pytest_cache
+build
+*.egg-info
+
+# FILES
+delete*
+*.whl
+*.tar.gz

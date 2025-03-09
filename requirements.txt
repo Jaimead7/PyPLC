@@ -1,0 +1,3 @@
+tomli >= 2.2.1
+tomli-w >= 1.2.0
+jaimead7-pyutils >= 0.0.9

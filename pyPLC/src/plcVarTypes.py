@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from struct import pack, unpack
 from types import MappingProxyType
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Optional, Type
 
-from pyUtils import NoInstantiable, ValidationClass
+from pyUtils import NoInstantiable, ValidationClass, warningLog
 
 
 class PLCVarType(ABC):
@@ -51,6 +51,10 @@ class PLCBoolType(PLCVarType, NoInstantiable):
             return pack('>B', mask & int.from_bytes(lastValue, 'big'))
 
 
+class PLCByteType(PLCVarType, NoInstantiable):
+    ...  #TODO
+
+
 class PLCWordType(PLCVarType, NoInstantiable):
     NAME: ClassVar[str] = 'Word'
     BYTES: ClassVar[int] = 2
@@ -71,6 +75,10 @@ class PLCWordType(PLCVarType, NoInstantiable):
     def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validatePositiveInt(newValue)
         return pack('>H', newValue)
+
+
+class PLCDWordType(PLCVarType, NoInstantiable):
+    ...  #TODO
 
 
 class PLCIntType(PLCVarType, NoInstantiable):
@@ -225,10 +233,36 @@ class PLCRealType(PLCVarType, NoInstantiable):
         return pack('>f', newValue)
 
 
+class PLCLRealType(PLCVarType, NoInstantiable):
+    ... #TODO
+
+
+class PLCTimeType(PLCVarType, NoInstantiable):
+    ... #TODO
+
+
+class PLCDateType(PLCVarType, NoInstantiable):
+    ... #TODO
+
+
+class PLCDTLType(PLCVarType, NoInstantiable):
+    ... #TODO
+
+
+class PLCCharType(PLCVarType, NoInstantiable):
+    ... #TODO
+
+
+class PLCStringType(PLCVarType, NoInstantiable):
+    ... #TODO
+
+
 class PLCVarTypesFactory(NoInstantiable):
     TYPES = MappingProxyType({
         PLCBoolType.NAME.upper(): PLCBoolType,
+        PLCByteType.NAME.upper(): PLCByteType,
         PLCWordType.NAME.upper(): PLCWordType,
+        PLCDWordType.NAME.upper(): PLCDWordType,
         PLCIntType.NAME.upper(): PLCIntType,
         PLCUIntType.NAME.upper(): PLCUIntType,
         PLCSIntType.NAME.upper(): PLCSIntType,
@@ -236,4 +270,18 @@ class PLCVarTypesFactory(NoInstantiable):
         PLCDIntType.NAME.upper(): PLCDIntType,
         PLCUDIntType.NAME.upper(): PLCUDIntType,
         PLCRealType.NAME.upper(): PLCRealType,
+        PLCLRealType.NAME.upper(): PLCLRealType,
+        PLCTimeType.NAME.upper(): PLCTimeType,
+        PLCDateType.NAME.upper(): PLCDateType,
+        PLCDTLType.NAME.upper(): PLCDTLType,
+        PLCCharType.NAME.upper(): PLCCharType,
+        PLCStringType.NAME.upper(): PLCStringType,
     })
+
+    @classmethod
+    def get(cls, name: str) -> Optional[Type[PLCVarType]]:
+        try:
+            return cls.TYPES[name.upper()]
+        except KeyError:
+            warningLog(f'"{name}" not found un PLCVarTypes')
+            return None

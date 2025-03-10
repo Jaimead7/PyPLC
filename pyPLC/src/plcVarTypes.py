@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from datetime import date, time, timedelta
 from struct import pack, unpack
 from types import MappingProxyType
 from typing import Any, ClassVar, Optional, Type
@@ -6,20 +6,18 @@ from typing import Any, ClassVar, Optional, Type
 from pyUtils import NoInstantiable, ValidationClass, warningLog
 
 
-class PLCVarType(ABC):
+class PLCVarType():
     NAME: ClassVar[str] = ''
     BYTES: ClassVar[int] = 0
     BITS: ClassVar[int] = 0
 
-    @abstractmethod
     @classmethod
     def validateValue(cls, value: Any, *args, **kwargs) -> Any:
         raise TypeError(f'{value} is not type {cls.NAME}')
 
-    @abstractmethod
     @classmethod
     def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
-        ...
+        raise SyntaxError(f'{cls.__class__.__name__}.getByteArray() not defined.')
 
 
 class PLCBoolType(PLCVarType, NoInstantiable):
@@ -52,7 +50,25 @@ class PLCBoolType(PLCVarType, NoInstantiable):
 
 
 class PLCByteType(PLCVarType, NoInstantiable):
-    ...  #TODO
+    NAME: ClassVar[str] = 'Byte'
+    BYTES: ClassVar[int] = 1
+    BITS: ClassVar[int] = 0
+
+    @classmethod
+    def validateValue(cls, value: Any, *args, **kwargs) -> Any:
+        try:
+            if isinstance(value, bytearray):
+                return unpack('>b', value)[0]
+            value = ValidationClass.validateInt(value)
+            if value in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
+                return value
+        finally:
+            super.validateValue(value)
+
+    @classmethod
+    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+        newValue = ValidationClass.validateInt(newValue)
+        return pack('>b', newValue)
 
 
 class PLCWordType(PLCVarType, NoInstantiable):
@@ -78,7 +94,25 @@ class PLCWordType(PLCVarType, NoInstantiable):
 
 
 class PLCDWordType(PLCVarType, NoInstantiable):
-    ...  #TODO
+    NAME: ClassVar[str] = 'DWord'
+    BYTES: ClassVar[int] = 4
+    BITS: ClassVar[int] = 0
+
+    @classmethod
+    def validateValue(cls, value: Any, *args, **kwargs) -> Any:
+        try:
+            if isinstance(value, bytearray):
+                return unpack('>l', value)[0]
+            value = ValidationClass.validateInt(value)
+            if value in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
+                return value
+        finally:
+            super.validateValue(value)
+
+    @classmethod
+    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+        newValue = ValidationClass.validateInt(newValue)
+        return pack('>l', newValue)
 
 
 class PLCIntType(PLCVarType, NoInstantiable):
@@ -234,15 +268,74 @@ class PLCRealType(PLCVarType, NoInstantiable):
 
 
 class PLCLRealType(PLCVarType, NoInstantiable):
-    ... #TODO
+    NAME: ClassVar[str] = 'LReal'
+    BYTES: ClassVar[int] = 8
+    BITS: ClassVar[int] = 0
+
+    @classmethod
+    def validateValue(cls, value: Any, *args, **kwargs) -> Any:
+        try:
+            if isinstance(value, bytearray):
+                return unpack('>d', value)[0]
+            return ValidationClass.validateFloat(value)
+        finally:
+            super.validateValue(value)
+
+    @classmethod
+    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+        newValue = ValidationClass.validateFloat(newValue)
+        return pack('>d', newValue)
 
 
 class PLCTimeType(PLCVarType, NoInstantiable):
-    ... #TODO
+    NAME: ClassVar[str] = 'Time'
+    BYTES: ClassVar[int] = 4
+    BITS: ClassVar[int] = 0
+
+    @classmethod
+    def validateValue(cls, value: Any, *args, **kwargs) -> Any:
+        try:
+            if isinstance(value, bytearray):
+                return unpack('>l', value)[0]
+            value = ValidationClass.validateInt(value)
+            if value in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
+                return time(second= value/1000)
+        finally:
+            super.validateValue(value)
+
+    @classmethod
+    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+        if isinstance(newValue, time):
+            newValue = newValue.hour * 360000
+            newValue += newValue.minute * 60000
+            newValue += newValue.second * 1000
+            newValue += newValue.microsecond / 1000
+        newValue = ValidationClass.validateInt(newValue)
+        return pack('>l', newValue)
 
 
 class PLCDateType(PLCVarType, NoInstantiable):
-    ... #TODO
+    NAME: ClassVar[str] = 'Date'
+    BYTES: ClassVar[int] = 2
+    BITS: ClassVar[int] = 0
+
+    @classmethod
+    def validateValue(cls, value: Any, *args, **kwargs) -> Any:
+        try:
+            if isinstance(value, bytearray):
+                return unpack('>H', value)[0]
+            value = ValidationClass.validatePositiveInt(value)
+            if value in range(0, (2**(8*cls.BYTES))):
+                return date(year= 1990, month= 1, day= 1) + timedelta(days= value)
+        finally:
+            super.validateValue(value)
+
+    @classmethod
+    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+        if isinstance(newValue, date):
+            newValue = (newValue - date(year= 1990, month= 1, day= 1)).days
+        newValue = ValidationClass.validatePositiveInt(newValue)
+        return pack('>H', newValue)
 
 
 class PLCDTLType(PLCVarType, NoInstantiable):
@@ -250,7 +343,23 @@ class PLCDTLType(PLCVarType, NoInstantiable):
 
 
 class PLCCharType(PLCVarType, NoInstantiable):
-    ... #TODO
+    NAME: ClassVar[str] = 'Char'
+    BYTES: ClassVar[int] = 1
+    BITS: ClassVar[int] = 0
+
+    @classmethod
+    def validateValue(cls, value: Any, *args, **kwargs) -> Any:
+        try:
+            if isinstance(value, bytearray):
+                return unpack('>b', value)[0]
+            return chr(ValidationClass.validateInt(value))
+        finally:
+            super.validateValue(value)
+
+    @classmethod
+    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+        newValue = ValidationClass.validateInt(newValue)
+        return pack('>b', newValue)
 
 
 class PLCStringType(PLCVarType, NoInstantiable):

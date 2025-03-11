@@ -16,8 +16,8 @@ class PLCVarType():
         raise TypeError(f'{value} is not type {cls.NAME}')
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
-        raise SyntaxError(f'{cls.__class__.__name__}.getByteArray() not defined.')
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
+        raise SyntaxError(f'{cls.__class__.__name__}.getBytearray() not defined.')
 
 
 class PLCBoolType(PLCVarType, NoInstantiable):
@@ -35,7 +35,7 @@ class PLCBoolType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls,
+    def getBytearray(cls,
                      newValue: Any,
                      lastValue: bytearray = bytearray([0]),
                      pos: int = 0,
@@ -66,7 +66,7 @@ class PLCByteType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validateInt(newValue)
         return pack('>b', newValue)
 
@@ -88,7 +88,7 @@ class PLCWordType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validatePositiveInt(newValue)
         return pack('>H', newValue)
 
@@ -110,7 +110,7 @@ class PLCDWordType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validateInt(newValue)
         return pack('>l', newValue)
 
@@ -132,7 +132,7 @@ class PLCIntType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validateInt(newValue)
         return pack('>h', newValue)
 
@@ -154,7 +154,7 @@ class PLCUIntType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validatePositiveInt(newValue)
         return pack('>H', newValue)
 
@@ -176,7 +176,7 @@ class PLCSIntType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validateInt(newValue)
         return pack('>b', newValue)
 
@@ -198,7 +198,7 @@ class PLCUSIntType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validatePositiveInt(newValue)
         return pack('>B', newValue)
 
@@ -220,7 +220,7 @@ class PLCDIntType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validateInt(newValue)
         return pack('>l', newValue)
 
@@ -242,7 +242,7 @@ class PLCUDIntType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validatePositiveInt(newValue)
         return pack('>L', newValue)
 
@@ -262,7 +262,7 @@ class PLCRealType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validateFloat(newValue)
         return pack('>f', newValue)
 
@@ -282,7 +282,7 @@ class PLCLRealType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validateFloat(newValue)
         return pack('>d', newValue)
 
@@ -304,7 +304,7 @@ class PLCTimeType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         if isinstance(newValue, time):
             newValue = newValue.hour * 360000
             newValue += newValue.minute * 60000
@@ -331,7 +331,7 @@ class PLCDateType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         if isinstance(newValue, date):
             newValue = (newValue - date(year= 1990, month= 1, day= 1)).days
         newValue = ValidationClass.validatePositiveInt(newValue)
@@ -357,7 +357,7 @@ class PLCCharType(PLCVarType, NoInstantiable):
             super.validateValue(value)
 
     @classmethod
-    def getByteArray(cls, newValue: Any, *args, **kwargs) -> bytes:
+    def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
         newValue = ValidationClass.validateInt(newValue)
         return pack('>b', newValue)
 
@@ -392,5 +392,4 @@ class PLCVarTypesFactory(NoInstantiable):
         try:
             return cls.TYPES[name.upper()]
         except KeyError:
-            warningLog(f'"{name}" not found un PLCVarTypes')
-            return None
+            raise TypeError(f'"{name}" not found in PLCVarTypes')

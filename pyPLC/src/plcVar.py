@@ -9,9 +9,7 @@ from .plcVarTypes import PLCVarType, PLCVarTypesFactory
 class PLCReadWrite(NoInstantiable):
     READWRITE: ClassVar[int] = 0
     READ: ClassVar[int] = 1
-    WRITE: ClassVar[int] = 2
     _DICT: ClassVar[dict] = {'READ': READ,
-                             'WRITE': WRITE,
                              'READWRITE': READWRITE}
 
     @classmethod
@@ -31,24 +29,31 @@ class PLCMemoryOffset():
         try:
             if len(args) == 1:
                 if isinstance(args[0], str):
-                    args[0] = args[0].split('.')
-                if isinstance(args[0], (tuple, list)):
-                    input: tuple = tuple(ValidationClass.validatePositiveInt(args[0][0]),
-                                         ValidationClass.validatePositiveInt(args[0][1]))
+                    input: tuple = tuple((ValidationClass.validatePositiveInt(args[0].split('.')[0]),
+                                          ValidationClass.validatePositiveInt(args[0].split('.')[1]))) 
+                elif isinstance(args[0], (tuple, list)):
+                    input: tuple = tuple((ValidationClass.validatePositiveInt(args[0][0]),
+                                          ValidationClass.validatePositiveInt(args[0][1])))
                 else:
                     raise TypeError
             if len(args) == 2:
-                input: tuple = (ValidationClass.validatePositiveInt(args[0]),
-                                ValidationClass.validatePositiveInt(args[1]))
+                input: tuple = ((ValidationClass.validatePositiveInt(args[0]),
+                                 ValidationClass.validatePositiveInt(args[1])))
             try:
-                input: tuple = (ValidationClass.validatePositiveInt(kwargs['bytesOffset']),
-                                ValidationClass.validatePositiveInt(kwargs['bitsOffset']))
+                input: tuple = ((ValidationClass.validatePositiveInt(kwargs['bytesOffset']),
+                                 ValidationClass.validatePositiveInt(kwargs['bitsOffset'])))
             except KeyError:
                 pass
         except TypeError:
             raise TypeError(f'{args} not valid as {self.__class__.__name__}')
         self.bytesOffset: int = input[0]
         self.bitsOffset: int = input[1]
+
+    def __str__(self) -> str:
+        return f'({self.bytesOffset}.{self.bitsOffset})'
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}({self.bytesOffset}.{self.bitsOffset})'
 
 
 @dataclass
@@ -81,12 +86,19 @@ class PLCVar(ValidationClass):
                 pass
         super().__post_init__()
 
+    def __str__(self) -> str:
+        return self.name
+
     def __eq__(self, value: object) -> bool:
         if isinstance(value, self.__class__):
             return self.name == value.name and self.varType == value.varType
         if isinstance(value, str):
             return self.name == value
         return super().__eq__(value)
+    
+    @property
+    def bytesSize(self) -> int:
+        return self.varType.BYTES if self.varType.BYTES != 0 else 1
 
     def validate_name(self, value: Any) -> str:
         try:
@@ -117,9 +129,8 @@ class PLCVar(ValidationClass):
         except TypeError:
             raise TypeError(f'Invalid type {self.__class__.__name__}.value of type "{self.varType.NAME}"')
 
-    def bytearray(self, lastValue: bytearray = bytearray()) -> bytearray:
+    def getBytearray(self, lastValue: bytearray = bytearray()) -> bytearray:
         return self.varType.getBytearray(self.value, lastValue, self.offset.bitsOffset)
 
     def fromMemoryArea(self, buffer: bytearray) -> None:
-        auxBytes: int = self.varType.BYTES if self.varType.BYTES != 0 else 1
-        self.value = buffer[self.offset.bytesOffset: self.offset.bytesOffset + auxBytes]
+        self.value = buffer[self.offset.bytesOffset: self.offset.bytesOffset + self.bytesSize]

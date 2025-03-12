@@ -13,31 +13,36 @@
         [plc.Test.Inputs]
             Size = 11
             [plc.Test.Inputs.I00]
-                Name = 'I0.0'
                 Offset = '0.0'
                 Type = 'Bool'
                 RW = 'Read'
             [plc.Test.Inputs.IW10]
-                Name = 'IW10'
                 Offset = '10.0'
                 Type = 'Word'
                 RW = 'Read'
         [plc.Test.Outputs]
             Size = 11
             [plc.Test.Outputs.Q00]
-                Name = 'Q0.0'
                 Offset = '0.0'
                 Type = 'Bool'
                 RW = 'Read'
             [plc.Test.Outputs.QW10]
-                Name = 'QW10'
                 Offset = '10.0'
                 Type = 'Word'
                 RW = 'Read'
+        [plc.Test.Markers]
+            Size = 11
+            [plc.Test.Outputs.M00]
+                Offset = '0.0'
+                Type = 'Bool'
+                RW = 'ReadWrite'
+            [plc.Test.Outputs.MW10]
+                Offset = '10.0'
+                Type = 'Word'
+                RW = 'ReadWrite'
         [plc.Test.DB10]
             Size = 11
             [plc.Test.Outputs.Var1]
-                Name = 'Var1'
                 Offset = '0.0'
                 Type = 'Real'
                 RW = 'ReadWrite'

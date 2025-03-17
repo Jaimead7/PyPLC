@@ -4,12 +4,10 @@
 
 [plc]
     [plc.Test]
-        Name = 'Test'
         IP = '192.168.0.1'
         Rack = 0
         Slot = 1
         Port = 102
-        Firmware = '2.0'
         [plc.Test.Inputs]
             Size = 11
             [plc.Test.Inputs.I00]

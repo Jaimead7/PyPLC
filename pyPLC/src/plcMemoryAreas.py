@@ -1,9 +1,9 @@
 import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import KW_ONLY, InitVar, dataclass, field
 from typing import Any, Optional
 
-from pyUtils import ConfigFileManager, ValidationClass, errorLog, warningLog
+from pyUtils import ConfigDict, ValidationClass, errorLog, warningLog
 from snap7.client import Client
 
 from .plcVar import PLCReadWrite, PLCVar
@@ -15,7 +15,7 @@ class PLCVarDict(dict):
 
     def __setitem__(self, key, value) -> None:
         if not isinstance(value, PLCVar):
-            raise TypeError(f'{value} is not type PLCVar')
+            raise TypeError(f'{self.__class__.__name__}: {value} is not type PLCVar')
         key: str = ValidationClass.validateStr(key)
         return super().__setitem__(key, value)
 
@@ -28,6 +28,13 @@ class PLCVarDict(dict):
 class PLCMemoryArea(ValidationClass, ABC):
     variables: PLCVarDict = field(default_factory= PLCVarDict)
     size: int = 0
+    _: KW_ONLY
+    fromDict: InitVar[Optional[dict]] = None
+
+    def __post_init__(self, fromDict: Optional[dict]) -> None:
+        if fromDict is not None:
+            fromDict = ConfigDict(self.validateDict(fromDict))
+            self.setVarsFromDict(fromDict)
 
     def validate_variables(self, value: Any) -> list[PLCVar]:
         try:
@@ -46,7 +53,7 @@ class PLCMemoryArea(ValidationClass, ABC):
             raise TypeError(msg)
 
     @abstractmethod
-    def setVarsFromConfigFile(self, cfg: ConfigFileManager, plcName= 'mainPLC'):
+    def setVarsFromDict(self, fromDict: ConfigDict):
         ...
 
     @abstractmethod
@@ -61,7 +68,7 @@ class PLCMemoryArea(ValidationClass, ABC):
         try:
             return self.variables[var].value
         except KeyError:
-            msg: str = f'{var} not found in {self} variables'
+            msg: str = f'{self.__class__.__name__}: {var} not found in variables'
             errorLog(msg)
             raise KeyError(msg)
 
@@ -70,11 +77,11 @@ class PLCMemoryArea(ValidationClass, ABC):
             self.variables[var].value = self._readValue(var, client)
             return self.variables[var].value
         except KeyError:
-            msg: str = f'{var} not found in {self} variables'
+            msg: str = f'{self.__class__.__name__}: {var} not found in variables'
             errorLog(msg)
             raise KeyError(msg)
 
-    def writeArea(self, client: Client):
+    def writeArea(self, client: Client) -> None:
         [self._writeVar(var, client) for var in self.variables]
 
     @abstractmethod
@@ -85,32 +92,34 @@ class PLCMemoryArea(ValidationClass, ABC):
         try:
             self.variables[var].value = value
         except KeyError:
-            msg: str = f'{var} not found in {self} variables'
+            msg: str = f'{self.__class__.__name__}: {var} not found in variables'
             errorLog(msg)
             raise KeyError(msg)
 
-    def writeVarToPLC(self, var: PLCVar | str, value: Any, client: Client):
+    def writeVarToPLC(self, var: PLCVar | str, value: Any, client: Client) -> None:
         #TODO: manage exceptions
         try:
             self.variables[var].value = value
             self._writeVar(self.variables[var], client)
         except KeyError:
-            msg: str = f'{var} not found in {self} variables'
+            msg: str = f'{self.__class__.__name__}: {var} not found in variables'
             errorLog(msg)
             raise KeyError(msg)
 
 
 @dataclass
 class PLCInputs(PLCMemoryArea):
-    def setVarsFromConfigFile(self, cfg: ConfigFileManager, plcName= 'mainPLC') -> None:
+    def setVarsFromDict(self, fromDict: dict) -> None:
+        if not isinstance(fromDict, ConfigDict):
+            fromDict = ConfigDict(self.validateDict(fromDict))
         try:
-            for name, attr in cfg.plc.__getattr__(plcName).Inputs.items():
+            for name, attr in fromDict.Inputs.items():
                 if name.upper() == 'SIZE':
                     self.size = attr
                 if isinstance(attr, dict):
                     self.variables[attr[name]] = PLCVar(name= name, fromDict= attr)
         except AttributeError:
-            msg: str = f'plc.{plcName}.Inputs not found in config file'
+            msg: str = f'{self.__class__.__name__}: "Inputs" not found'
             warningLog(msg)
 
     def readArea(self, client: Client) -> None:
@@ -121,7 +130,7 @@ class PLCInputs(PLCMemoryArea):
         try:
             return client.eb_read(var.offset.bytesOffset, var.bytesSize)
         except RuntimeError:
-            msg: str = f"Can't connect to PLC"
+            msg: str = f"{self.__class__.__name__}: Can't connect to PLC"
             errorLog(msg)
             raise RuntimeError(msg)
 
@@ -131,20 +140,22 @@ class PLCInputs(PLCMemoryArea):
             if value is not None:
                 client.eb_write(var.offset.bytesOffset, var.bytesSize, value)
                 return
-        warningLog(f"Can't write {PLCVar} to PLC inputs")
+        warningLog(f"{self.__class__.__name__}: Can't write {var} to PLC inputs")
 
 
 @dataclass
 class PLCOutputs(PLCMemoryArea):
-    def setVarsFromConfigFile(self, cfg: ConfigFileManager, plcName= 'mainPLC') -> None:
+    def setVarsFromDict(self, fromDict: ConfigDict) -> None:
+        if not isinstance(fromDict, ConfigDict):
+            fromDict = ConfigDict(self.validateDict(fromDict))
         try:
-            for name, attr in cfg.plc.__getattr__(plcName).Outputs.items():
+            for name, attr in fromDict.Outputs.items():
                 if name.upper() == 'SIZE':
                     self.size = attr
                 if isinstance(attr, dict):
                     self.variables[attr[name]] = PLCVar(name= name, fromDict= attr)
         except AttributeError:
-            msg: str = f'plc.{plcName}.Outputs not found in config file'
+            msg: str = f'{self.__class__.__name__}: "Outputs" not found'
             warningLog(msg)
 
     def readArea(self, client: Client) -> None:
@@ -155,7 +166,7 @@ class PLCOutputs(PLCMemoryArea):
         try:
             return client.ab_read(var.offset.bytesOffset, var.bytesSize)
         except RuntimeError:
-            msg: str = f"Can't connect to PLC"
+            msg: str = f"{self.__class__.__name__}: Can't connect to PLC"
             errorLog(msg)
             raise RuntimeError(msg)
 
@@ -165,20 +176,22 @@ class PLCOutputs(PLCMemoryArea):
             if value is not None:
                 client.ab_write(var.offset.bytesOffset, value)
                 return
-        warningLog(f"Can't write {PLCVar} to PLC outputs")
+        warningLog(f"{self.__class__.__name__}: Can't write {var} to PLC outputs")
 
 
 @dataclass
 class PLCMarkers(PLCMemoryArea):
-    def setVarsFromConfigFile(self, cfg: ConfigFileManager, plcName= 'mainPLC') -> None:
+    def setVarsFromDict(self, fromDict: ConfigDict) -> None:
+        if not isinstance(fromDict, ConfigDict):
+            fromDict = ConfigDict(self.validateDict(fromDict))
         try:
-            for name, attr in cfg.plc.__getattr__(plcName).Markers.items():
+            for name, attr in fromDict.Markers.items():
                 if name.upper() == 'SIZE':
                     self.size = attr
                 if isinstance(attr, dict):
                     self.variables[attr[name]] = PLCVar(name= name, fromDict= attr)
         except AttributeError:
-            msg: str = f'plc.{plcName}.Markers not found in config file'
+            msg: str = f'{self.__class__.__name__}: "Markers" not found in config file'
             warningLog(msg)
 
     def readArea(self, client: Client) -> None:
@@ -189,7 +202,7 @@ class PLCMarkers(PLCMemoryArea):
         try:
             return client.mb_read(var.offset.bytesOffset, var.bytesSize)
         except RuntimeError:
-            msg: str = f"Can't connect to PLC"
+            msg: str = f"{self.__class__.__name__}: Can't connect to PLC"
             errorLog(msg)
             raise RuntimeError(msg)
 
@@ -199,16 +212,18 @@ class PLCMarkers(PLCMemoryArea):
             if value is not None:
                 client.mb_write(var.offset.bytesOffset, var.bytesSize, value)
                 return
-        warningLog(f"Can't write {PLCVar} to PLC markers")
+        warningLog(f"{self.__class__.__name__}: Can't write {var} to PLC markers")
 
 
 @dataclass
 class PLCDB(PLCMemoryArea):
     number: int
 
-    def setVarsFromConfigFile(self, cfg: ConfigFileManager, plcName= 'mainPLC') -> None:
+    def setVarsFromDict(self, fromDict: ConfigDict) -> None:
+        if not isinstance(fromDict, ConfigDict):
+            fromDict = ConfigDict(self.validateDict(fromDict))
         try:
-            for key, value in cfg.plc.__getattr__(plcName).items():
+            for key, value in fromDict.items():
                 if not re.compile('DB[0-9]+$').match(key):
                     raise AttributeError
                 if self.number != int(key[2:]):
@@ -219,7 +234,7 @@ class PLCDB(PLCMemoryArea):
                     if isinstance(attr, dict):
                         self.variables[attr[name]] = PLCVar(name= name, fromDict= attr)
         except AttributeError:
-            msg: str = f'plc.{plcName}.DB not found in config file'
+            msg: str = f"{self.__class__.__name__}: DB's not found in config file"
             warningLog(msg)
 
     def readArea(self, client: Client) -> None:
@@ -230,7 +245,7 @@ class PLCDB(PLCMemoryArea):
         try:
             return client.db_read(self.number, var.offset.bytesOffset, var.bytesSize)
         except RuntimeError:
-            msg: str = f"Can't connect to PLC"
+            msg: str = f"{self.__class__.__name__}: Can't connect to PLC"
             errorLog(msg)
             raise RuntimeError(msg)
 
@@ -240,4 +255,4 @@ class PLCDB(PLCMemoryArea):
             if value is not None:
                 client.db_write(self.number, var.offset.bytesOffset, value)
                 return
-        warningLog(f"Can't write {PLCVar} to PLC DB{self.number}")
+        warningLog(f"{self.__class__.__name__}: Can't write {var} to PLC DB{self.number}")

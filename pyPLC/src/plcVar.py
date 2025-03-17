@@ -1,7 +1,7 @@
 from dataclasses import KW_ONLY, InitVar, dataclass
 from typing import Any, ClassVar, Optional, Type
 
-from pyUtils import NoInstantiable, ValidationClass, warningLog
+from pyUtils import NoInstantiable, ValidationClass
 
 from .plcVarTypes import PLCVarType, PLCVarTypesFactory
 
@@ -67,7 +67,7 @@ class PLCVar(ValidationClass):
     fromDict: InitVar[Optional[dict]] = None
 
     def __post_init__(self, fromDict: Optional[dict]) -> None:
-        if fromDict:
+        if fromDict is not None:
             try:
                 self.name = fromDict['Name']
             except KeyError:

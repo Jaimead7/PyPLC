@@ -217,7 +217,7 @@ class PLCMarkers(PLCMemoryArea):
 
 @dataclass
 class PLCDB(PLCMemoryArea):
-    number: int
+    number: int = 0
 
     def setVarsFromDict(self, fromDict: ConfigDict) -> None:
         if not isinstance(fromDict, ConfigDict):

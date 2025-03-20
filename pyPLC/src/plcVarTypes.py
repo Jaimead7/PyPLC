@@ -3,7 +3,7 @@ from struct import pack, unpack
 from types import MappingProxyType
 from typing import Any, ClassVar, Optional, Type
 
-from pyUtils import NoInstantiable, ValidationClass, warningLog
+from pyUtils import NoInstantiable, ValidationClass
 
 
 class PLCVarType():
@@ -31,8 +31,9 @@ class PLCBoolType(PLCVarType, NoInstantiable):
             if isinstance(value, bytearray):
                 return int.from_bytes(value, 'big') & 2 ** pos != 0
             return ValidationClass.validateBool(value)
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls,
@@ -62,8 +63,9 @@ class PLCByteType(PLCVarType, NoInstantiable):
             value = ValidationClass.validateInt(value)
             if value in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 return value
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -84,8 +86,9 @@ class PLCWordType(PLCVarType, NoInstantiable):
             value = ValidationClass.validatePositiveInt(value)
             if value in range(0, (2**(8*cls.BYTES))):
                 return value
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -106,8 +109,9 @@ class PLCDWordType(PLCVarType, NoInstantiable):
             value = ValidationClass.validateInt(value)
             if value in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 return value
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -128,8 +132,9 @@ class PLCIntType(PLCVarType, NoInstantiable):
             value = ValidationClass.validateInt(value)
             if value in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 return value
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -150,8 +155,9 @@ class PLCUIntType(PLCVarType, NoInstantiable):
             value = ValidationClass.validatePositiveInt(value)
             if value in range(0, (2**(8*cls.BYTES))):
                 return value
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -172,8 +178,9 @@ class PLCSIntType(PLCVarType, NoInstantiable):
             value = ValidationClass.validateInt(value)
             if value in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 return value
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -194,8 +201,9 @@ class PLCUSIntType(PLCVarType, NoInstantiable):
             value = ValidationClass.validatePositiveInt(value)
             if value in range(0, (2**(8*cls.BYTES))):
                 return value
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -216,8 +224,9 @@ class PLCDIntType(PLCVarType, NoInstantiable):
             value = ValidationClass.validateInt(value)
             if value in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 return value
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -238,8 +247,9 @@ class PLCUDIntType(PLCVarType, NoInstantiable):
             value = ValidationClass.validatePositiveInt(value)
             if value in range(0, (2**(8*cls.BYTES))):
                 return value
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -258,8 +268,9 @@ class PLCRealType(PLCVarType, NoInstantiable):
             if isinstance(value, bytearray):
                 return unpack('>f', value)[0]
             return ValidationClass.validateFloat(value)
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -278,8 +289,9 @@ class PLCLRealType(PLCVarType, NoInstantiable):
             if isinstance(value, bytearray):
                 return unpack('>d', value)[0]
             return ValidationClass.validateFloat(value)
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -300,8 +312,9 @@ class PLCTimeType(PLCVarType, NoInstantiable):
             value = ValidationClass.validateInt(value)
             if value in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 return time(second= value/1000)
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -327,8 +340,9 @@ class PLCDateType(PLCVarType, NoInstantiable):
             value = ValidationClass.validatePositiveInt(value)
             if value in range(0, (2**(8*cls.BYTES))):
                 return date(year= 1990, month= 1, day= 1) + timedelta(days= value)
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:
@@ -353,8 +367,9 @@ class PLCCharType(PLCVarType, NoInstantiable):
             if isinstance(value, bytearray):
                 return unpack('>b', value)[0]
             return chr(ValidationClass.validateInt(value))
-        finally:
-            super.validateValue(value)
+        except TypeError:
+            pass
+        super(cls, cls).validateValue(value)
 
     @classmethod
     def getBytearray(cls, newValue: Any, *args, **kwargs) -> bytes:

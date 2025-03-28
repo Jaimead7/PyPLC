@@ -527,7 +527,7 @@ class TestPLCRealType:
 
     @mark.parametrize('newValue, expected', [
         (-3.4028234663852886e+38, bytearray([255, 127, 255, 255])),
-        (+3.4028234663852886e+38, bytearray([127, 127, 255, 255])),
+        (3.4028234663852886e+38, bytearray([127, 127, 255, 255])),
         (-0., bytearray([128, 0, 0, 0])),
     ])
     def test_getBytearray(self, newValue: Any, expected: bytearray) -> None:
@@ -535,8 +535,32 @@ class TestPLCRealType:
 
     @mark.parametrize('newValue, error', [
         (-3.402824e+38, TypeError),
-        (+3.402824e+38, TypeError),
+        (3.402824e+38, TypeError),
     ])
     def test_getBytearrayErrors(self, newValue: Any, error: BaseException) -> None:
         with raises(error):
             PLCRealType.getBytearray(newValue)
+
+
+class TestPLCLRealType:
+    ...  #TODO
+
+
+class TestPLCTimeType:
+    ...  #TODO
+
+
+class TestPLCDateType:
+    ...  #TODO
+
+
+class TestPLCDTLType:
+    ...  #TODO
+
+
+class TestPLCCharType:
+    ...  #TODO
+
+
+class TestPLCStringType:
+    ...  #TODO

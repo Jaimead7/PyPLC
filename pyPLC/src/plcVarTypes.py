@@ -12,6 +12,12 @@ class PLCVarType():
     BYTES: ClassVar[int] = 0
     BITS: ClassVar[int] = 0
 
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}({self.NAME}, {self.BYTES}, {self.BITS})'
+
+    def __str__(self) -> str:
+        return self.NAME
+
     @classmethod
     def validateValue(cls, value: Any, *args, **kwargs) -> Any:
         raise TypeError(f'{value} is not type {cls.NAME}')

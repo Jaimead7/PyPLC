@@ -6,8 +6,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 import requests
-from pyUtils import ConfigDict, ValidationClass, errorLog, warningLog
 from snap7 import Client
+
+from pyUtils import ConfigDict, ValidationClass, errorLog, warningLog
 
 from .plcMemoryAreas import PLCDB, PLCInputs, PLCMarkers, PLCOutputs
 
@@ -33,21 +34,37 @@ class PLCManager(ValidationClass):
             except KeyError:
                 warningLog(f'{self.__class__.__name__}: "Rack" not found in dict')
             try:
-                self.rack = fromDict.Slot
+                self.slot = fromDict.Slot
             except KeyError:
                 warningLog(f'{self.__class__.__name__}: "Slot" not found in dict')
             try:
-                self.rack = fromDict.Port
+                self.port = fromDict.Port
             except KeyError:
                 warningLog(f'{self.__class__.__name__}: "Port" not found in dict')
-            self.inputs = PLCInputs(fromDict= fromDict.Inputs)
-            self.outputs = PLCInputs(fromDict= fromDict.Outputs)
-            self.markers = PLCInputs(fromDict= fromDict.Markers)
+            try:
+                inputs: ConfigDict = fromDict.Inputs
+            except AttributeError:
+                warningLog(f'{self.__class__.__name__}: "Inputs" not found in dict')
+                inputs = None
+            self.inputs = PLCInputs(fromDict= inputs)
+            try:
+                outputs: ConfigDict = fromDict.Outputs
+            except AttributeError:
+                warningLog(f'{self.__class__.__name__}: "Outputs" not found in dict')
+                outputs = None
+            self.outputs = PLCOutputs(fromDict= outputs)
+            try:
+                markers: ConfigDict = fromDict.Markers
+            except AttributeError:
+                warningLog(f'{self.__class__.__name__}: "Markers" not found in dict')
+                markers = None
+            self.markers = PLCMarkers(fromDict= markers)
             self.dbs: list[PLCDB] = []
-            for key, value in fromDict:
+            for key, value in fromDict.items():
                 if re.compile('^DB[0-9]+$').match(key):
                     self.dbs.append(PLCDB(number= key[2:], fromDict= value))
             self.client: Client = Client()
+            self.connect()
 
     def validate_ip(self, value: Any) -> Optional[str]:
         try:
@@ -113,6 +130,19 @@ class PLCManager(ValidationClass):
             errorLog(msg)
             raise TypeError(msg)
         return value
+
+    def connect(self) -> None:
+        self.client: Client = Client()
+        try:
+            self.client.connect(self.ip,
+                                self.rack,
+                                self.slot,
+                                self.port)
+        except RuntimeError:
+            warningLog(f'{self.__class__.__name__}: Connection failed')
+
+    def disconnect(self) -> None:
+        return self.client.disconnect()
 
     def isConnected(self) -> bool:
         return self.client.get_connected()

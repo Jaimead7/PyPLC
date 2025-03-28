@@ -407,7 +407,9 @@ class PLCCharType(PLCVarType, NoInstantiable):
     def validateValue(cls, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
-                return unpack('>b', value)[0]
+                return chr(unpack('>b', value)[0])
+            if isinstance(value, str):
+                return value[0]
             return chr(ValidationClass.validateInt(value))
         except [TypeError, StructError]:
             pass
@@ -452,4 +454,4 @@ class PLCVarTypesFactory(NoInstantiable):
         try:
             return cls.TYPES[name.upper()]
         except KeyError:
-            raise KeyError(f'"{name}" not found in PLCVarTypes')
+            raise TypeError(f'"{name}" is not a PLCVarTypes')

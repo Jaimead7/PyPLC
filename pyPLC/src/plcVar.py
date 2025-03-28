@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import KW_ONLY, InitVar, dataclass
 from typing import Any, ClassVar, Optional, Type
 
@@ -13,15 +15,19 @@ class PLCReadWrite(NoInstantiable):
                              'READWRITE': READWRITE}
 
     @classmethod
-    def get(cls, value: str) -> int:
+    def validate(cls, value: Any) -> int:
+        if isinstance(value, str):
+            try:
+                return cls._DICT[ValidationClass.validateStr(value).upper()]
+            except KeyError:
+                ...
         try:
-            return cls._DICT[ValidationClass.validateStr(value).upper()]
-        except KeyError:
-            raise KeyError(f'{value} not found in {cls.__name__}')
-
-    @classmethod
-    def check(cls, value: int) -> bool:
-        return value in cls._DICT.values()
+            value = ValidationClass.validatePositiveInt(value)
+            if value in cls._DICT.values():
+                return value
+        except TypeError:
+            ...
+        raise TypeError(f'{value} is not a valid {cls.__name__}')
 
 
 class PLCMemoryOffset():
@@ -44,6 +50,7 @@ class PLCMemoryOffset():
                                  ValidationClass.validatePositiveInt(kwargs['bitsOffset'])))
             except KeyError:
                 pass
+            if input[1] > 7: raise TypeError
         except TypeError:
             raise TypeError(f'{args} not valid as {self.__class__.__name__}')
         self.bytesOffset: int = input[0]
@@ -54,6 +61,16 @@ class PLCMemoryOffset():
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({self.bytesOffset}.{self.bitsOffset})'
+
+    def __eq__(self, other: PLCMemoryOffset) -> bool:
+        if not isinstance(other, PLCMemoryOffset):
+            try:
+                other = PLCMemoryOffset(other)
+            except TypeError:
+                return False
+        conditions: tuple[bool] = (self.bytesOffset == other.bytesOffset,
+                                   self.bitsOffset == other.bitsOffset)
+        return all(conditions)
 
 
 @dataclass
@@ -81,7 +98,7 @@ class PLCVar(ValidationClass):
             except KeyError:
                 pass
             try:
-                self.rw = PLCReadWrite.get(fromDict['R/W'])
+                self.rw = fromDict['R/W']
             except KeyError:
                 pass
         super().__post_init__()
@@ -91,10 +108,16 @@ class PLCVar(ValidationClass):
 
     def __eq__(self, value: object) -> bool:
         if isinstance(value, self.__class__):
-            return self.name == value.name and self.varType == value.varType
+            conditions: tuple[bool] = (self.name == value.name,
+                                       self.offset == value.offset,
+                                       self.varType == value.varType)
+            return all(conditions)
         if isinstance(value, str):
             return self.name == value
         return super().__eq__(value)
+
+    def __len__(self) -> int:  #INFO: if not defined pytest will fail if PLCVar is parametrize
+        return self.varType.BYTES + self.varType.BITS * 8
     
     @property
     def bytesSize(self) -> int:
@@ -112,15 +135,19 @@ class PLCVar(ValidationClass):
         return PLCMemoryOffset(value)
 
     def validate_varType(self, value: Any) -> Type[PLCVarType]:
-        if issubclass(value, PLCVarType):
-            return value
+        try:
+            if issubclass(value, PLCVarType):
+                return value
+        except TypeError:
+            ...
         return PLCVarTypesFactory.get(self.validateStr(value))
 
     def validate_rw(self, value: Any) -> int:
-        value = self.validatePositiveInt(value)
-        if PLCReadWrite.check(value):
+        try:
+            value = PLCReadWrite.validate(value)
             return value
-        raise TypeError(f'Invalid type {self.__class__.__name__}.rw')
+        except TypeError:
+            raise TypeError(f'Invalid type {self.__class__.__name__}.rw')
 
     def validate_value(self, value: Any) -> Optional[Any]:
         if value is None: return value

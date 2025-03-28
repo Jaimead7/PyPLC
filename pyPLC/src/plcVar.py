@@ -112,8 +112,11 @@ class PLCVar(ValidationClass):
         return PLCMemoryOffset(value)
 
     def validate_varType(self, value: Any) -> Type[PLCVarType]:
-        if issubclass(value, PLCVarType):
-            return value
+        try:
+            if issubclass(value, PLCVarType):
+                return value
+        except TypeError:
+            pass
         return PLCVarTypesFactory.get(self.validateStr(value))
 
     def validate_rw(self, value: Any) -> int:

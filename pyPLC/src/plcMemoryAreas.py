@@ -3,8 +3,9 @@ from abc import ABC, abstractmethod
 from dataclasses import KW_ONLY, InitVar, dataclass, field
 from typing import Any, Optional
 
-from pyUtils import ConfigDict, ValidationClass, errorLog, warningLog
 from snap7.client import Client
+
+from pyUtils import ConfigDict, ValidationClass, errorLog, warningLog
 
 from .plcVar import PLCReadWrite, PLCVar
 
@@ -113,11 +114,11 @@ class PLCInputs(PLCMemoryArea):
         if not isinstance(fromDict, ConfigDict):
             fromDict = ConfigDict(self.validateDict(fromDict))
         try:
-            for name, attr in fromDict.Inputs.items():
+            for name, value in fromDict.items():
                 if name.upper() == 'SIZE':
-                    self.size = attr
-                if isinstance(attr, dict):
-                    self.variables[attr[name]] = PLCVar(name= name, fromDict= attr)
+                    self.size = value
+                if isinstance(value, dict):
+                    self.variables[name] = PLCVar(name= name, fromDict= value)
         except AttributeError:
             msg: str = f'{self.__class__.__name__}: "Inputs" not found'
             warningLog(msg)
@@ -149,11 +150,11 @@ class PLCOutputs(PLCMemoryArea):
         if not isinstance(fromDict, ConfigDict):
             fromDict = ConfigDict(self.validateDict(fromDict))
         try:
-            for name, attr in fromDict.Outputs.items():
+            for name, value in fromDict.items():
                 if name.upper() == 'SIZE':
-                    self.size = attr
-                if isinstance(attr, dict):
-                    self.variables[attr[name]] = PLCVar(name= name, fromDict= attr)
+                    self.size = value
+                if isinstance(value, dict):
+                    self.variables[name] = PLCVar(name= name, fromDict= value)
         except AttributeError:
             msg: str = f'{self.__class__.__name__}: "Outputs" not found'
             warningLog(msg)
@@ -185,11 +186,11 @@ class PLCMarkers(PLCMemoryArea):
         if not isinstance(fromDict, ConfigDict):
             fromDict = ConfigDict(self.validateDict(fromDict))
         try:
-            for name, attr in fromDict.Markers.items():
+            for name, value in fromDict.items():
                 if name.upper() == 'SIZE':
-                    self.size = attr
-                if isinstance(attr, dict):
-                    self.variables[attr[name]] = PLCVar(name= name, fromDict= attr)
+                    self.size = value
+                if isinstance(value, dict):
+                    self.variables[name] = PLCVar(name= name, fromDict= value)
         except AttributeError:
             msg: str = f'{self.__class__.__name__}: "Markers" not found in config file'
             warningLog(msg)
@@ -219,20 +220,25 @@ class PLCMarkers(PLCMemoryArea):
 class PLCDB(PLCMemoryArea):
     number: int = 0
 
+    def validate_number(self, value: Any) -> int:
+        try:
+            return self.validatePositiveInt(value)
+        except TypeError:
+            msg: str = f'Invalid type for {self.__class__.__name__}.number: {value}'
+            errorLog(msg)
+            raise TypeError(msg)
+
     def setVarsFromDict(self, fromDict: ConfigDict) -> None:
         if not isinstance(fromDict, ConfigDict):
             fromDict = ConfigDict(self.validateDict(fromDict))
         try:
-            for key, value in fromDict.items():
-                if not re.compile('DB[0-9]+$').match(key):
-                    raise AttributeError
-                if self.number != int(key[2:]):
-                    raise AttributeError
-                for name, attr in value.items():
-                    if name.upper() == 'SIZE':
-                        self.size = attr
-                    if isinstance(attr, dict):
-                        self.variables[attr[name]] = PLCVar(name= name, fromDict= attr)
+            for name, value in fromDict.items():
+                if name.upper() == 'SIZE':
+                    self.size = value
+                if name.upper() == 'NUMBER':
+                    self.number = value
+                if isinstance(value, dict):
+                    self.variables[name] = PLCVar(name= name, fromDict= value)
         except AttributeError:
             msg: str = f"{self.__class__.__name__}: DB's not found in config file"
             warningLog(msg)

@@ -139,7 +139,7 @@ class PLCVar(ValidationClass):
             if issubclass(value, PLCVarType):
                 return value
         except TypeError:
-            ...
+            pass
         return PLCVarTypesFactory.get(self.validateStr(value))
 
     def validate_rw(self, value: Any) -> int:

@@ -5,38 +5,7 @@ from typing import Any, Optional
 from pyUtils import ConfigDict, ValidationClass, errorLog, warningLog
 from snap7.client import Client
 
-from .plcVar import PLCReadWrite, PLCVar
-
-
-class PLCVarDict(dict):
-    def __init__(self, *args, **kwargs) -> None:
-        self.update(*args, **kwargs)
-
-    def __getitem__(self, key) -> Any:
-        key: str = ValidationClass.validateStr(key)
-        return super().__getitem__(key)
-
-    def __setitem__(self, key, value) -> None:
-        if not isinstance(value, PLCVar):
-            raise TypeError(f'{self.__class__.__name__}: {value} is not type PLCVar')
-        try:
-            key: str = ValidationClass.validateStr(key)
-        except TypeError:
-            raise TypeError(f'{self.__class__.__name__}: {key} is not a valid key')
-        return super().__setitem__(key, value)
-
-    def __ior__(self, other: Any) -> None:
-        self.update(other)
-        return self
-
-    def __or__(self, other: Any) -> None:
-        self.update(other)
-        return self
-
-    def update(self, *args, **kwargs) -> None:
-        for key, value in dict(*args, **kwargs).items():
-            key: str = ValidationClass.validateStr(key)
-            self[key] = value
+from .plcVar import PLCReadWrite, PLCVar, PLCVarDict
 
 
 @dataclass

@@ -65,6 +65,16 @@ class PLCMemoryArea(ValidationClass, ABC):
             errorLog(msg)
             raise TypeError(msg)
 
+    def validate_parent(self, value: Any) -> Optional[PLCManager]:
+        from .plcManager import PLCManager
+        if value is None:
+            return None
+        if isinstance(value, PLCManager): #FIXME: PLCManager import
+            return value
+        msg: str = f'Invalid type for {self._identifier}.parent: {value}'
+        errorLog(msg)
+        raise TypeError(msg)
+
     @abstractmethod
     def setVarsFromDict(self, fromDict: ConfigDict):
         ...

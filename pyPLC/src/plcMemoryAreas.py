@@ -33,8 +33,8 @@ class PLCVarDict(dict):
 class PLCMemoryArea(ValidationClass, ABC):
     variables: PLCVarDict = field(default_factory= PLCVarDict)
     size: int = 0
-    parent: Optional[PLCManager] = None
     _: KW_ONLY
+    parent: Optional[PLCManager] = None
     fromDict: InitVar[Optional[dict]] = None
 
     def __post_init__(self, fromDict: Optional[dict]) -> None:
@@ -154,7 +154,9 @@ class PLCInputs(PLCMemoryArea):
                 if name.upper() == 'SIZE':
                     self.size = value
                 if isinstance(value, dict):
-                    self.variables[name] = PLCVar(name= name, fromDict= value)
+                    self.variables[name] = PLCVar(name= name,
+                                                  fromDict= value,
+                                                  parent= self)
         except AttributeError:
             msg: str = f'{self._identifier}: "Inputs" not found'
             warningLog(msg)
@@ -195,7 +197,9 @@ class PLCOutputs(PLCMemoryArea):
                 if name.upper() == 'SIZE':
                     self.size = value
                 if isinstance(value, dict):
-                    self.variables[name] = PLCVar(name= name, fromDict= value)
+                    self.variables[name] = PLCVar(name= name,
+                                                  fromDict= value,
+                                                  parent= self)
         except AttributeError:
             msg: str = f'{self._identifier}: "Outputs" not found'
             warningLog(msg)
@@ -236,7 +240,9 @@ class PLCMarkers(PLCMemoryArea):
                 if name.upper() == 'SIZE':
                     self.size = value
                 if isinstance(value, dict):
-                    self.variables[name] = PLCVar(name= name, fromDict= value)
+                    self.variables[name] = PLCVar(name= name,
+                                                  fromDict= value,
+                                                  parent= self)
         except AttributeError:
             msg: str = f'{self._identifier}: "Markers" not found in config file'
             warningLog(msg)
@@ -275,7 +281,7 @@ class PLCDB(PLCMemoryArea):
     def _identifier(self) -> str:
         if self.parent is None:
             return f'{self.__class__.__name__}'
-        return f'{self.__class__.__name__}({self.parent.name}.{self.number})'
+        return f'{self.__class__.__name__}({self.parent.name}.DB{self.number})'
 
     def validate_number(self, value: Any) -> int:
         try:
@@ -295,7 +301,9 @@ class PLCDB(PLCMemoryArea):
                 if name.upper() == 'NUMBER':
                     self.number = value
                 if isinstance(value, dict):
-                    self.variables[name] = PLCVar(name= name, fromDict= value)
+                    self.variables[name] = PLCVar(name= name,
+                                                  fromDict= value,
+                                                  parent= self)
         except AttributeError:
             msg: str = f"{self._identifier}: DB's not found in config file"
             warningLog(msg)

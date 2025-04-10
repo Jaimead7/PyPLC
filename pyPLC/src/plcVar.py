@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import KW_ONLY, InitVar, dataclass
-from typing import Any, ClassVar, Optional, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Type
 
 from pyUtils import NoInstantiable, ValidationClass, debugLog, errorLog
+
+if TYPE_CHECKING:
+    from .plcMemoryAreas import PLCMemoryArea
 
 from .plcVarTypes import PLCVarType, PLCVarTypesFactory
 
@@ -81,6 +84,7 @@ class PLCVar(ValidationClass):
     rw: int = PLCReadWrite.READ
     value: Optional[Any] = None
     _: KW_ONLY
+    parent: Optional[PLCMemoryArea] = None
     fromDict: InitVar[Optional[dict]] = None
 
     def __post_init__(self, fromDict: Optional[dict]) -> None:
@@ -125,7 +129,10 @@ class PLCVar(ValidationClass):
 
     @property
     def _identifier(self) -> str:
-        return f'{self.__class__.__name__}({self.name})'
+        from .plcMemoryAreas import PLCDB
+        if isinstance(self.parent, PLCDB):
+            return f'{self.__class__.__name__}({self.parent.parent.name}.DB{self.parent.number}.{self.name})'
+        return f'{self.__class__.__name__}({self.parent.parent.name}.{self.parent.__class__.__name__}.{self.name})'
 
     @property
     def bytesSize(self) -> int:

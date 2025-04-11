@@ -11,22 +11,7 @@ from pyUtils import ConfigDict, ValidationClass, debugLog, errorLog, warningLog
 if TYPE_CHECKING:
     from .plcManager import PLCManager
 
-from .plcVar import PLCReadWrite, PLCVar
-
-
-class PLCVarDict(dict):
-    def __init__(self, *args, **kwargs) -> None:
-        self.update(*args, **kwargs)
-
-    def __setitem__(self, key, value) -> None:
-        if not isinstance(value, PLCVar):
-            raise TypeError(f'{self.__class__.__name__}: {value} is not type PLCVar')
-        key: str = ValidationClass.validateStr(key)
-        return super().__setitem__(key, value)
-
-    def update(self, *args, **kwargs) -> None:
-        for key, value in dict(*args, **kwargs).items():
-            self[key] = value
+from .plcVar import PLCReadWrite, PLCVar, PLCVarDict
 
 
 @dataclass
@@ -69,7 +54,7 @@ class PLCMemoryArea(ValidationClass, ABC):
         from .plcManager import PLCManager
         if value is None:
             return None
-        if isinstance(value, PLCManager): #FIXME: PLCManager import
+        if isinstance(value, PLCManager):
             return value
         msg: str = f'Invalid type for {self._identifier}.parent: {value}'
         errorLog(msg)

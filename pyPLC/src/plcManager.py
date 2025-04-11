@@ -3,18 +3,19 @@ import socket
 from dataclasses import KW_ONLY, InitVar, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 import requests
 from snap7 import Client
 
-from pyUtils import ConfigDict, ValidationClass, errorLog, warningLog
+from pyUtils import ConfigDict, ValidationClass, debugLog, errorLog, warningLog
 
 from .plcMemoryAreas import PLCDB, PLCInputs, PLCMarkers, PLCOutputs
 
 
 @dataclass
 class PLCManager(ValidationClass):
+    name: Optional[str] = None
     ip: Optional[str] = None
     rack: Optional[int] = None
     slot: Optional[int] = None
@@ -26,45 +27,64 @@ class PLCManager(ValidationClass):
         if fromDict is not None:
             fromDict = ConfigDict(self.validateDict(fromDict))
             try:
+                self.name = fromDict.Name
+            except KeyError:
+                warningLog(f'{self._identifier}: "Name" not found in dict')
+            try:
                 self.ip = fromDict.IP
             except KeyError:
-                warningLog(f'{self.__class__.__name__}: "IP" not found in dict')
+                warningLog(f'{self._identifier}: "IP" not found in dict')
             try:
                 self.rack = fromDict.Rack
             except KeyError:
-                warningLog(f'{self.__class__.__name__}: "Rack" not found in dict')
+                warningLog(f'{self._identifier}: "Rack" not found in dict')
             try:
                 self.slot = fromDict.Slot
             except KeyError:
-                warningLog(f'{self.__class__.__name__}: "Slot" not found in dict')
+                warningLog(f'{self._identifier}: "Slot" not found in dict')
             try:
                 self.port = fromDict.Port
             except KeyError:
-                warningLog(f'{self.__class__.__name__}: "Port" not found in dict')
+                warningLog(f'{self._identifier}: "Port" not found in dict')
             try:
                 inputs: ConfigDict = fromDict.Inputs
             except AttributeError:
-                warningLog(f'{self.__class__.__name__}: "Inputs" not found in dict')
+                warningLog(f'{self._identifier}: "Inputs" not found in dict')
                 inputs = None
-            self.inputs = PLCInputs(fromDict= inputs)
+            self.inputs = PLCInputs(fromDict= inputs, parent= self)
             try:
                 outputs: ConfigDict = fromDict.Outputs
             except AttributeError:
-                warningLog(f'{self.__class__.__name__}: "Outputs" not found in dict')
+                warningLog(f'{self._identifier}: "Outputs" not found in dict')
                 outputs = None
-            self.outputs = PLCOutputs(fromDict= outputs)
+            self.outputs = PLCOutputs(fromDict= outputs, parent= self)
             try:
                 markers: ConfigDict = fromDict.Markers
             except AttributeError:
-                warningLog(f'{self.__class__.__name__}: "Markers" not found in dict')
+                warningLog(f'{self._identifier}: "Markers" not found in dict')
                 markers = None
-            self.markers = PLCMarkers(fromDict= markers)
+            self.markers = PLCMarkers(fromDict= markers, parent= self)
             self.dbs: list[PLCDB] = []
             for key, value in fromDict.items():
                 if re.compile('^DB[0-9]+$').match(key):
-                    self.dbs.append(PLCDB(number= key[2:], fromDict= value))
-            self.client: Client = Client()
+                    self.dbs.append(PLCDB(number= key[2:],
+                                          fromDict= value,
+                                          parent= self))
             self.connect()
+        debugLog(f'{self._identifier}: Created')
+
+    @property
+    def _identifier(self) -> str:
+        return f'{self.__class__.__name__}({self.name})'
+
+    def validate_name(self, value: Any) -> Optional[str]:
+        try:
+            value = ValidationClass.validateOptStr(value)
+        except TypeError:
+            msg: str = f'Invalid type {self._identifier}.name: {value}'
+            errorLog(msg)
+            raise TypeError(msg)
+        return value
 
     def validate_ip(self, value: Any) -> Optional[str]:
         try:
@@ -72,7 +92,7 @@ class PLCManager(ValidationClass):
             if value is not None:
                 socket.inet_aton(value)
         except [socket.error, TypeError]:
-            msg: str = f'Invalid type {self.__class__.__name__}.ip: {value}'
+            msg: str = f'Invalid type {self._identifier}.ip: {value}'
             errorLog(msg)
             raise TypeError(msg)
         return value
@@ -81,7 +101,7 @@ class PLCManager(ValidationClass):
         try:
             return ValidationClass.validateOptPositiveInt(value)
         except TypeError:
-            msg: str = f'Invalid type {self.__class__.__name__}.rack: {value}'
+            msg: str = f'Invalid type {self._identifier}.rack: {value}'
             errorLog(msg)
             raise TypeError(msg)
 
@@ -89,7 +109,7 @@ class PLCManager(ValidationClass):
         try:
             return ValidationClass.validateOptPositiveInt(value)
         except TypeError:
-            msg: str = f'Invalid type {self.__class__.__name__}.slot: {value}'
+            msg: str = f'Invalid type {self._identifier}.slot: {value}'
             errorLog(msg)
             raise TypeError(msg)
 
@@ -97,27 +117,27 @@ class PLCManager(ValidationClass):
         try:
             return ValidationClass.validateOptPositiveInt(value)
         except TypeError:
-            msg: str = f'Invalid type {self.__class__.__name__}.port: {value}'
+            msg: str = f'Invalid type {self._identifier}.port: {value}'
             errorLog(msg)
             raise TypeError(msg)
 
     def validate_inputs(self, value: Any) -> PLCInputs:
         if not isinstance(value, PLCInputs):
-            msg: str = f'Invalid type {self.__class__.__name__}.inputs: {value}'
+            msg: str = f'Invalid type {self._identifier}.inputs: {value}'
             errorLog(msg)
             raise TypeError(msg)
         return value
 
     def validate_outputs(self, value: Any) -> PLCOutputs:
         if not isinstance(value, PLCOutputs):
-            msg: str = f'Invalid type {self.__class__.__name__}.outputs: {value}'
+            msg: str = f'Invalid type {self._identifier}.outputs: {value}'
             errorLog(msg)
             raise TypeError(msg)
         return value
 
     def validate_markers(self, value: Any) -> PLCMarkers:
         if not isinstance(value, PLCMarkers):
-            msg: str = f'Invalid type {self.__class__.__name__}.markers: {value}'
+            msg: str = f'Invalid type {self._identifier}.markers: {value}'
             errorLog(msg)
             raise TypeError(msg)
         return value
@@ -126,7 +146,7 @@ class PLCManager(ValidationClass):
         try:
             value = ValidationClass.validateList(value, [PLCDB])
         except TypeError:
-            msg: str = f'Invalid type {self.__class__.__name__}.dbs: {value}'
+            msg: str = f'Invalid type {self._identifier}.dbs: {value}'
             errorLog(msg)
             raise TypeError(msg)
         return value
@@ -138,20 +158,43 @@ class PLCManager(ValidationClass):
                                 self.rack,
                                 self.slot,
                                 self.port)
+            debugLog(f'{self._identifier}: PLC connected')
         except RuntimeError:
-            warningLog(f'{self.__class__.__name__}: Connection failed')
+            errorLog(f'{self._identifier}: Connection failed')
 
     def disconnect(self) -> None:
-        return self.client.disconnect()
+        self.client.disconnect()
+        debugLog(f'{self._identifier}: PLC disconnected')
 
     def isConnected(self) -> bool:
         return self.client.get_connected()
 
     def readData(self) -> None:
+        self.readInputs()
+        self.readOutputs()
+        self.readMarkers()
+        self.readAllDB()
+        debugLog(f'{self._identifier}: Data readed')
+
+    def readInputs(self) -> None:
         self.inputs.readArea(self.client)
+        debugLog(f'{self._identifier}: Inputs readed')
+
+    def readOutputs(self) -> None:
         self.outputs.readArea(self.client)
+        debugLog(f'{self._identifier}: Outputs readed')
+
+    def readMarkers(self) -> None:
         self.markers.readArea(self.client)
-        [db.readArea(self.client) for db in self.dbs]
+        debugLog(f'{self._identifier}: Markers readed')
+
+    def readDB(self, dbs: Optional[Iterable | PLCDB] = None) -> None:
+        if dbs is None:
+            dbs = self.dbs
+        if isinstance(dbs, PLCDB):
+            dbs = tuple(dbs)
+        [db.readArea(self.client) for db in dbs]
+        debugLog(f'{self._identifier}: All DBs readed')
 
     def downloadDatalog(self,
                         datalogName: str,
@@ -163,5 +206,6 @@ class PLCManager(ValidationClass):
                 date: str = str(datetime.now(timezone.utc).date()).replace('-','')
                 with open(filePath / f'{date}-{datalogName}.csv', 'wb') as file:
                     file.write(response.content)
+                    debugLog(f'{self._identifier}: Readed DataLog "{datalogName}"')
         except requests.exceptions.ConnectionError:
-            errorLog(f"Can't download DataLog from {self.ip}")
+            errorLog(f"{self._identifier}: Can't download DataLog")

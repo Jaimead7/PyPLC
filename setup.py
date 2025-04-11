@@ -4,7 +4,8 @@ from pathlib import Path
 import tomli
 from setuptools import find_packages, setup
 
-with open("README.md", "r") as f:
+readmeFilePath: str = str(Path(__file__).parent / 'README.md')
+with open(readmeFilePath, 'r') as f:
     longDescription: str = f.read()
 
 configFilePath: str = Path(__file__).parent / 'pyPLC' / 'dist' / 'config' / 'config.toml'
@@ -14,10 +15,13 @@ try:
 except tomli.TOMLDecodeError:
     raise tomli.TOMLDecodeError(f'Error with config file')
 
-with open('requirements.txt') as f:
+requirementsFilePath: str = str(Path(__file__).parent / 'requirements.txt')
+with open(requirementsFilePath) as f:
     requires: list = [line.replace('\n', '')
                       for line in f.readlines()
                       if line != '\n']
+
+packageData: dict = {'pyPLC': ['dist/config/*.toml',]}
 
 setup(
     name= myPyUtilsConfig['app']['name'],
@@ -29,7 +33,7 @@ setup(
     author_email= 'alvarez.diaz.jaime1@gmail.com',
     url= 'https://github.com/Jaimead7/PyPLC',
     packages= find_packages(),
-    package_data= {'pyPLC': ['dist/config/*.toml',]},
+    package_data= packageData,
     include_package_data= True,
     classifiers=[
         'License :: OSI Approved :: MIT License',

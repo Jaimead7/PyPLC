@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import KW_ONLY, InitVar, dataclass
-from typing import Any, ClassVar, Optional, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Type
 
-from pyUtils import NoInstantiable, ValidationClass
+from pyUtils import NoInstantiable, ValidationClass, debugLog, errorLog
+
+if TYPE_CHECKING:
+    from .plcMemoryAreas import PLCMemoryArea
 
 from .plcVarTypes import PLCVarType, PLCVarTypesFactory
 
@@ -81,24 +84,29 @@ class PLCVar(ValidationClass):
     rw: int = PLCReadWrite.READ
     value: Optional[Any] = None
     _: KW_ONLY
+    parent: Optional[PLCMemoryArea] = None
     fromDict: InitVar[Optional[dict]] = None
 
     def __post_init__(self, fromDict: Optional[dict]) -> None:
         if fromDict is not None:
             try:
                 self.name = fromDict['Name']
+                debugLog(f'{self._identifier}: name overwritten from dict')
             except KeyError:
                 pass
             try:
                 self.offset = fromDict['Offset']
+                debugLog(f'{self._identifier}: offset overwritten from dict')
             except KeyError:
                 pass
             try:
                 self.varType = fromDict['Type']
+                debugLog(f'{self._identifier}: varType overwritten from dict')
             except KeyError:
                 pass
             try:
                 self.rw = fromDict['R/W']
+                debugLog(f'{self._identifier}: rw overwritten from dict')
             except KeyError:
                 pass
         super().__post_init__()
@@ -118,7 +126,14 @@ class PLCVar(ValidationClass):
 
     def __len__(self) -> int:  #INFO: if not defined pytest will fail if PLCVar is parametrize
         return self.varType.BYTES + self.varType.BITS * 8
-    
+
+    @property
+    def _identifier(self) -> str:
+        from .plcMemoryAreas import PLCDB
+        if isinstance(self.parent, PLCDB):
+            return f'{self.__class__.__name__}({self.parent.parent.name}.DB{self.parent.number}.{self.name})'
+        return f'{self.__class__.__name__}({self.parent.parent.name}.{self.parent.__class__.__name__}.{self.name})'
+
     @property
     def bytesSize(self) -> int:
         return self.varType.BYTES if self.varType.BYTES != 0 else 1
@@ -127,12 +142,19 @@ class PLCVar(ValidationClass):
         try:
             return self.validateStr(value)
         except TypeError:
-            raise TypeError(f'Invalid type {self.__class__.__name__}.name')
+            msg: str = f'Invalid type for {self._identifier}.name: {value}'
+            errorLog(msg)
+            raise TypeError(msg)
 
     def validate_offset(self, value: Any) -> PLCMemoryOffset:
         if isinstance(value, PLCMemoryOffset):
             return value
-        return PLCMemoryOffset(value)
+        try:
+            return PLCMemoryOffset(value)
+        except TypeError:
+            msg: str = f'Invalid type for {self._identifier}.offset: {value}'
+            errorLog(msg)
+            raise TypeError(msg)
 
     def validate_varType(self, value: Any) -> Type[PLCVarType]:
         try:
@@ -140,27 +162,41 @@ class PLCVar(ValidationClass):
                 return value
         except TypeError:
             pass
-        return PLCVarTypesFactory.get(self.validateStr(value))
+        try:
+            return PLCVarTypesFactory.get(self.validateStr(value))
+        except TypeError:
+            msg: str = f'Invalid type for {self._identifier}.varType: {value}'
+            errorLog(msg)
+            raise TypeError(msg)
 
     def validate_rw(self, value: Any) -> int:
         try:
             value = PLCReadWrite.validate(value)
             return value
         except TypeError:
-            raise TypeError(f'Invalid type {self.__class__.__name__}.rw')
+            msg: str = f'Invalid type for {self._identifier}.rw: {value}'
+            errorLog(msg)
+            raise TypeError(msg)
 
     def validate_value(self, value: Any) -> Optional[Any]:
         if value is None: return value
         try:
             return self.varType.validateValue(value, self.offset.bitsOffset)
         except TypeError:
-            raise TypeError(f'Invalid type {self.__class__.__name__}.value of type "{self.varType.NAME}"')
+            msg: str = f'Invalid type for {self._identifier}.value of type "{self.varType.NAME}": {value}'
+            errorLog(msg)
+            raise TypeError(msg)
 
     def getBytearray(self, lastValue: bytearray = bytearray()) -> bytearray:
         return self.varType.getBytearray(self.value, lastValue, self.offset.bitsOffset)
 
     def fromMemoryArea(self, buffer: bytearray) -> None:
-        self.value = buffer[self.offset.bytesOffset: self.offset.bytesOffset + self.bytesSize]
+        result: bytearray = buffer[self.offset.bytesOffset : self.offset.bytesOffset + self.bytesSize]
+        if len(result) != self.bytesSize:
+            msg: str = f'{self._identifier}.fromMemoryArea(): buffer out of bounds. len(buffer) == {len(buffer)}; size == {self.bytesSize}'
+            errorLog(msg)
+            raise TypeError(msg)
+        self.value = result
 
 
 class PLCVarDict(dict):

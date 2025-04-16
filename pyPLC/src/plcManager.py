@@ -10,7 +10,8 @@ from snap7 import Client
 
 from pyUtils import ConfigDict, ValidationClass, debugLog, errorLog, warningLog
 
-from .plcMemoryAreas import PLCDB, PLCInputs, PLCMarkers, PLCOutputs
+from .plcMemoryAreas import (PLCDB, PLCComunicationResult, PLCInputs,
+                             PLCMarkers, PLCOutputs)
 
 
 @dataclass
@@ -173,28 +174,40 @@ class PLCManager(ValidationClass):
         self.readInputs()
         self.readOutputs()
         self.readMarkers()
-        self.readAllDB()
+        self.readDB()
         debugLog(f'{self._identifier}: Data readed')
 
     def readInputs(self) -> None:
-        self.inputs.readArea(self.client)
-        debugLog(f'{self._identifier}: Inputs readed')
+        if not self.isConnected():
+            return
+        result: int = self.inputs.readArea(self.client)
+        if result == PLCComunicationResult.NOT_CONNECTED:
+            self.disconnect()
 
     def readOutputs(self) -> None:
-        self.outputs.readArea(self.client)
-        debugLog(f'{self._identifier}: Outputs readed')
+        if not self.isConnected():
+            return
+        result: int = self.outputs.readArea(self.client)
+        if result == PLCComunicationResult.NOT_CONNECTED:
+            self.disconnect()
 
     def readMarkers(self) -> None:
-        self.markers.readArea(self.client)
-        debugLog(f'{self._identifier}: Markers readed')
+        if not self.isConnected():
+            return
+        result: int = self.markers.readArea(self.client)
+        if result == PLCComunicationResult.NOT_CONNECTED:
+            self.disconnect()
 
     def readDB(self, dbs: Optional[Iterable | PLCDB] = None) -> None:
+        if not self.isConnected():
+            return
         if dbs is None:
             dbs = self.dbs
         if isinstance(dbs, PLCDB):
             dbs = tuple(dbs)
-        [db.readArea(self.client) for db in dbs]
-        debugLog(f'{self._identifier}: All DBs readed')
+        results: list = [db.readArea(self.client) for db in dbs]
+        if PLCComunicationResult.NOT_CONNECTED in results:
+            self.disconnect()
 
     def downloadDatalog(self,
                         datalogName: str,

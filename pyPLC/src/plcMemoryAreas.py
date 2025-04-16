@@ -5,13 +5,28 @@ from dataclasses import KW_ONLY, InitVar, dataclass, field
 from typing import TYPE_CHECKING, Any, Optional
 
 from snap7.client import Client
+from snap7.error import error_text
 
-from pyUtils import ConfigDict, ValidationClass, debugLog, errorLog, warningLog
+from pyUtils import (ConfigDict, NoInstantiable, ValidationClass, debugLog,
+                     errorLog, warningLog)
 
 if TYPE_CHECKING:
     from .plcManager import PLCManager
 
 from .plcVar import PLCReadWrite, PLCVar, PLCVarDict
+
+#TODO: manage Runtime exceptions in readVarFromPLC, writeArea, writeVarToPLC 
+
+class PLCComunicationResult(NoInstantiable):
+    SUCCESS = 0
+    UNESPECIFY_ERROR = 100
+    NOT_CONNECTED = 101
+    INVALID_PARAMS = 102
+
+
+class PLCClientErrors(NoInstantiable):
+    NOT_CONNECTED = RuntimeError(error_text(0x92746))
+    INVALID_PARAMS = RuntimeError(error_text(0x200000))
 
 
 @dataclass
@@ -65,7 +80,7 @@ class PLCMemoryArea(ValidationClass, ABC):
         ...
 
     @abstractmethod
-    def readArea(self, client: Client) -> None:
+    def readArea(self, client: Client) -> int:
         ...
 
     @abstractmethod
@@ -116,7 +131,6 @@ class PLCMemoryArea(ValidationClass, ABC):
             raise KeyError(msg)
 
     def writeVarToPLC(self, var: PLCVar | str, value: Any, client: Client) -> None:
-        #TODO: manage exceptions
         try:
             if isinstance(var, str):
                 var = self.variables[var]
@@ -127,6 +141,16 @@ class PLCMemoryArea(ValidationClass, ABC):
             msg: str = f'{self._identifier}: {var} not found in variables'
             errorLog(msg)
             raise KeyError(msg)
+
+    def manageRuntimeError(self, error: Exception) -> int:
+        if str(error) == str(PLCClientErrors.NOT_CONNECTED):
+            errorLog(f'{self._identifier}: Unable to connect')
+            return PLCComunicationResult.NOT_CONNECTED
+        if str(error) == str(PLCClientErrors.INVALID_PARAMS):
+            errorLog(f'{self._identifier}: Invalid parameters')
+            return PLCComunicationResult.INVALID_PARAMS
+        errorLog(f'{self._identifier}: Unable to read')
+        return PLCComunicationResult.UNESPECIFY_ERROR
 
 
 @dataclass
@@ -146,10 +170,14 @@ class PLCInputs(PLCMemoryArea):
             msg: str = f'{self._identifier}: "Inputs" not found'
             warningLog(msg)
 
-    def readArea(self, client: Client) -> None:
-        buffer: bytearray = client.eb_read(0, self.size)
-        [var.fromMemoryArea(buffer) for var in self.variables]
+    def readArea(self, client: Client) -> int:
+        try:
+            buffer: bytearray = client.eb_read(0, self.size)
+        except RuntimeError as e:
+            return self.manageRuntimeError(e)
+        [var.fromMemoryArea(buffer) for var in self.variables.values()]
         debugLog(f'{self._identifier}: Readed')
+        return PLCComunicationResult.SUCCESS
 
     def _readVar(self, var: PLCVar, client: Client) -> Optional[bytearray]:
         try:
@@ -189,10 +217,14 @@ class PLCOutputs(PLCMemoryArea):
             msg: str = f'{self._identifier}: "Outputs" not found'
             warningLog(msg)
 
-    def readArea(self, client: Client) -> None:
-        buffer: bytearray = client.ab_read(0, self.size)
-        [var.fromMemoryArea(buffer) for var in self.variables]
+    def readArea(self, client: Client) -> int:
+        try:
+            buffer: bytearray = client.ab_read(0, self.size)
+        except RuntimeError as e:
+            return self.manageRuntimeError(e)
+        [var.fromMemoryArea(buffer) for var in self.variables.values()]
         debugLog(f'{self._identifier}: Readed')
+        return PLCComunicationResult.SUCCESS
 
     def _readVar(self, var: PLCVar, client: Client) -> Optional[bytearray]:
         try:
@@ -232,10 +264,14 @@ class PLCMarkers(PLCMemoryArea):
             msg: str = f'{self._identifier}: "Markers" not found in config file'
             warningLog(msg)
 
-    def readArea(self, client: Client) -> None:
-        buffer: bytearray = client.mb_read(0, self.size)
-        [var.fromMemoryArea(buffer) for var in self.variables]
+    def readArea(self, client: Client) -> int:
+        try:
+            buffer: bytearray = client.mb_read(0, self.size)
+        except RuntimeError as e:
+            return self.manageRuntimeError(e)
+        [var.fromMemoryArea(buffer) for var in self.variables.values()]
         debugLog(f'{self._identifier}: Readed')
+        return PLCComunicationResult.SUCCESS
 
     def _readVar(self, var: PLCVar, client: Client) -> Optional[bytearray]:
         try:
@@ -294,9 +330,13 @@ class PLCDB(PLCMemoryArea):
             warningLog(msg)
 
     def readArea(self, client: Client) -> None:
-        buffer: bytearray = client.db_get(self.number)
-        [var.fromMemoryArea(buffer) for var in self.variables]
+        try:
+            buffer: bytearray = client.db_read(self.number, 0, self.size)
+        except RuntimeError as e:
+            return self.manageRuntimeError(e)
+        [var.fromMemoryArea(buffer) for var in self.variables.values()]
         debugLog(f'{self._identifier}: Readed')
+        return PLCComunicationResult.SUCCESS
 
     def _readVar(self, var: PLCVar, client: Client) -> Optional[bytearray]:
         try:

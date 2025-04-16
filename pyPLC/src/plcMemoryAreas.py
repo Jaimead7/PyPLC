@@ -15,7 +15,8 @@ if TYPE_CHECKING:
 
 from .plcVar import PLCReadWrite, PLCVar, PLCVarDict
 
-#TODO: manage Runtime exceptions in readVarFromPLC, writeArea, writeVarToPLC 
+#TODO: manage Runtime exceptions in readVarFromPLC, writeArea, writeVarToPLC
+#TODO: manage exceptions when client is none
 
 class PLCComunicationResult(NoInstantiable):
     SUCCESS = 0
@@ -80,11 +81,11 @@ class PLCMemoryArea(ValidationClass, ABC):
         ...
 
     @abstractmethod
-    def readArea(self, client: Client) -> int:
+    def readArea(self, client: Client= None) -> int:
         ...
 
     @abstractmethod
-    def _readVar(self, var: PLCVar, client: Client) -> Optional[bytearray]:
+    def _readVar(self, var: PLCVar, client: Client= None) -> Optional[bytearray]:
         ...
 
     def getVar(self, var: PLCVar | str) -> Any:
@@ -99,7 +100,9 @@ class PLCMemoryArea(ValidationClass, ABC):
             errorLog(msg)
             raise KeyError(msg)
 
-    def readVarFromPLC(self, var: PLCVar | str, client: Client) -> Optional[Any]:
+    def readVarFromPLC(self, var: PLCVar | str, client: Client= None) -> Optional[Any]:
+        if client is None:
+            client = self.parent.client
         try:
             if isinstance(var, str):
                 var = self.variables[var]
@@ -111,12 +114,14 @@ class PLCMemoryArea(ValidationClass, ABC):
             errorLog(msg)
             raise KeyError(msg)
 
-    def writeArea(self, client: Client) -> None:
+    def writeArea(self, client: Client= None) -> None:
+        if client is None:
+            client = self.parent.client
         [self._writeVar(var, client) for var in self.variables]
         debugLog(f'{self._identifier}: Writed')
 
     @abstractmethod
-    def _writeVar(self, var: PLCVar, client: Client) -> bool:
+    def _writeVar(self, var: PLCVar, client: Client= None) -> bool:
         ...
 
     def setVar(self, var: PLCVar | str, value: Any) -> None:
@@ -130,7 +135,9 @@ class PLCMemoryArea(ValidationClass, ABC):
             errorLog(msg)
             raise KeyError(msg)
 
-    def writeVarToPLC(self, var: PLCVar | str, value: Any, client: Client) -> None:
+    def writeVarToPLC(self, var: PLCVar | str, value: Any, client: Client= None) -> None:
+        if client is None:
+            client = self.parent.client
         try:
             if isinstance(var, str):
                 var = self.variables[var]
@@ -170,7 +177,9 @@ class PLCInputs(PLCMemoryArea):
             msg: str = f'{self._identifier}: "Inputs" not found'
             warningLog(msg)
 
-    def readArea(self, client: Client) -> int:
+    def readArea(self, client: Client= None) -> int:
+        if client is None:
+            client = self.parent.client
         try:
             buffer: bytearray = client.eb_read(0, self.size)
         except RuntimeError as e:
@@ -179,7 +188,9 @@ class PLCInputs(PLCMemoryArea):
         debugLog(f'{self._identifier}: Readed')
         return PLCComunicationResult.SUCCESS
 
-    def _readVar(self, var: PLCVar, client: Client) -> Optional[bytearray]:
+    def _readVar(self, var: PLCVar, client: Client= None) -> Optional[bytearray]:
+        if client is None:
+            client = self.parent.client
         try:
             return client.eb_read(var.offset.bytesOffset, var.bytesSize)
         except RuntimeError:
@@ -187,7 +198,9 @@ class PLCInputs(PLCMemoryArea):
             errorLog(msg)
             raise RuntimeError(msg)
 
-    def _writeVar(self, var: PLCVar, client: Client) -> bool:
+    def _writeVar(self, var: PLCVar, client: Client= None) -> bool:
+        if client is None:
+            client = self.parent.client
         if var.rw in (PLCReadWrite.READWRITE):
             try:
                 value: Optional[bytearray] = var.getBytearray()
@@ -217,7 +230,9 @@ class PLCOutputs(PLCMemoryArea):
             msg: str = f'{self._identifier}: "Outputs" not found'
             warningLog(msg)
 
-    def readArea(self, client: Client) -> int:
+    def readArea(self, client: Client= None) -> int:
+        if client is None:
+            client = self.parent.client
         try:
             buffer: bytearray = client.ab_read(0, self.size)
         except RuntimeError as e:
@@ -226,7 +241,9 @@ class PLCOutputs(PLCMemoryArea):
         debugLog(f'{self._identifier}: Readed')
         return PLCComunicationResult.SUCCESS
 
-    def _readVar(self, var: PLCVar, client: Client) -> Optional[bytearray]:
+    def _readVar(self, var: PLCVar, client: Client= None) -> Optional[bytearray]:
+        if client is None:
+            client = self.parent.client
         try:
             return client.ab_read(var.offset.bytesOffset, var.bytesSize)
         except RuntimeError:
@@ -234,7 +251,9 @@ class PLCOutputs(PLCMemoryArea):
             errorLog(msg)
             raise RuntimeError(msg)
 
-    def _writeVar(self, var: PLCVar, client: Client) -> None:
+    def _writeVar(self, var: PLCVar, client: Client= None) -> None:
+        if client is None:
+            client = self.parent.client
         if var.rw in (PLCReadWrite.READWRITE):
             try:
                 value: Optional[bytearray] = var.getBytearray()
@@ -264,7 +283,9 @@ class PLCMarkers(PLCMemoryArea):
             msg: str = f'{self._identifier}: "Markers" not found in config file'
             warningLog(msg)
 
-    def readArea(self, client: Client) -> int:
+    def readArea(self, client: Client= None) -> int:
+        if client is None:
+            client = self.parent.client
         try:
             buffer: bytearray = client.mb_read(0, self.size)
         except RuntimeError as e:
@@ -273,7 +294,9 @@ class PLCMarkers(PLCMemoryArea):
         debugLog(f'{self._identifier}: Readed')
         return PLCComunicationResult.SUCCESS
 
-    def _readVar(self, var: PLCVar, client: Client) -> Optional[bytearray]:
+    def _readVar(self, var: PLCVar, client: Client= None) -> Optional[bytearray]:
+        if client is None:
+            client = self.parent.client
         try:
             return client.mb_read(var.offset.bytesOffset, var.bytesSize)
         except RuntimeError:
@@ -281,7 +304,9 @@ class PLCMarkers(PLCMemoryArea):
             errorLog(msg)
             raise RuntimeError(msg)
 
-    def _writeVar(self, var: PLCVar, client: Client) -> None:
+    def _writeVar(self, var: PLCVar, client: Client= None) -> None:
+        if client is None:
+            client = self.parent.client
         if var.rw in (PLCReadWrite.READWRITE):
             try:
                 value: Optional[bytearray] = var.getBytearray()
@@ -329,7 +354,9 @@ class PLCDB(PLCMemoryArea):
             msg: str = f"{self._identifier}: DB's not found in config file"
             warningLog(msg)
 
-    def readArea(self, client: Client) -> None:
+    def readArea(self, client: Client= None) -> None:
+        if client is None:
+            client = self.parent.client
         try:
             buffer: bytearray = client.db_read(self.number, 0, self.size)
         except RuntimeError as e:
@@ -338,7 +365,9 @@ class PLCDB(PLCMemoryArea):
         debugLog(f'{self._identifier}: Readed')
         return PLCComunicationResult.SUCCESS
 
-    def _readVar(self, var: PLCVar, client: Client) -> Optional[bytearray]:
+    def _readVar(self, var: PLCVar, client: Client= None) -> Optional[bytearray]:
+        if client is None:
+            client = self.parent.client
         try:
             return client.db_read(self.number, var.offset.bytesOffset, var.bytesSize)
         except RuntimeError:
@@ -346,7 +375,9 @@ class PLCDB(PLCMemoryArea):
             errorLog(msg)
             raise RuntimeError(msg)
 
-    def _writeVar(self, var: PLCVar, client: Client) -> None:
+    def _writeVar(self, var: PLCVar, client: Client= None) -> None:
+        if client is None:
+            client = self.parent.client
         if var.rw in (PLCReadWrite.READWRITE):
             try:
                 value: Optional[bytearray] = var.getBytearray()

@@ -65,12 +65,12 @@ class PLCManager(ValidationClass):
                 warningLog(f'{self._identifier}: "Markers" not found in dict')
                 markers = None
             self.markers = PLCMarkers(fromDict= markers, parent= self)
-            self.dbs: list[PLCDB] = []
+            self.dbs: dict[int, PLCDB] = {}
             for key, value in fromDict.items():
                 if re.compile('^DB[0-9]+$').match(key):
-                    self.dbs.append(PLCDB(number= key[2:],
-                                          fromDict= value,
-                                          parent= self))
+                    self.dbs[int(key[2:])] = PLCDB(number= key[2:],
+                                                   fromDict= value,
+                                                   parent= self)
             self.connect()
         debugLog(f'{self._identifier}: Created')
 
@@ -143,9 +143,9 @@ class PLCManager(ValidationClass):
             raise TypeError(msg)
         return value
 
-    def validate_dbs(self, value: Any) -> list[PLCDB]:
+    def validate_dbs(self, value: Any) -> dict[int, PLCDB]:
         try:
-            value = ValidationClass.validateList(value, [PLCDB])
+            value = ValidationClass.validateDict(value, ((int), (PLCDB)))
         except TypeError:
             msg: str = f'Invalid type {self._identifier}.dbs: {value}'
             errorLog(msg)
@@ -204,8 +204,8 @@ class PLCManager(ValidationClass):
         if dbs is None:
             dbs = self.dbs
         if isinstance(dbs, PLCDB):
-            dbs = tuple(dbs)
-        results: list = [db.readArea(self.client) for db in dbs]
+            dbs = {dbs.number: dbs}
+        results: list = [db.readArea(self.client) for db in dbs.values()]
         if PLCComunicationResult.NOT_CONNECTED in results:
             self.disconnect()
 

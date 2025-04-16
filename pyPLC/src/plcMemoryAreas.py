@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 from .plcVar import PLCReadWrite, PLCVar, PLCVarDict
 
-#TODO: manage Runtime exceptions in readVarFromPLC, writeArea, writeVarToPLC
+#TODO: manage Runtime exceptions in writeArea, writeVarToPLC
 #TODO: manage exceptions when client is none
 
 class PLCComunicationResult(NoInstantiable):
@@ -28,6 +28,15 @@ class PLCComunicationResult(NoInstantiable):
 class PLCClientErrors(NoInstantiable):
     NOT_CONNECTED = RuntimeError(error_text(0x92746))
     INVALID_PARAMS = RuntimeError(error_text(0x200000))
+    
+    @staticmethod
+    def getStr(error: RuntimeError) -> str:
+        if str(error) == str(PLCClientErrors.NOT_CONNECTED):
+            return 'PLC not connected'
+        if str(error) == str(PLCClientErrors.INVALID_PARAMS):
+            return 'Invalid parameters'
+        return 'Unknown error'
+        
 
 
 @dataclass
@@ -107,12 +116,16 @@ class PLCMemoryArea(ValidationClass, ABC):
             if isinstance(var, str):
                 var = self.variables[var]
             self.variables[var.name].value = self._readVar(var, client)
-            debugLog(f'{self._identifier}: {self.variables[var.name]} readed')
+            debugLog(f'{self._identifier}: "{self.variables[var.name]}" readed')
             return self.variables[var.name].value
         except KeyError:
-            msg: str = f'{self._identifier}: {var} not found in variables'
+            msg: str = f'{self._identifier}: "{var}" not found in variables'
             errorLog(msg)
             raise KeyError(msg)
+        except RuntimeError as e:
+            msg: str = f'{self._identifier}: Unable to read "{var}". {PLCClientErrors.getStr(e)}'
+            errorLog(msg)
+            raise RuntimeError(e)
 
     def writeArea(self, client: Client= None) -> None:
         if client is None:
@@ -191,12 +204,7 @@ class PLCInputs(PLCMemoryArea):
     def _readVar(self, var: PLCVar, client: Client= None) -> Optional[bytearray]:
         if client is None:
             client = self.parent.client
-        try:
-            return client.eb_read(var.offset.bytesOffset, var.bytesSize)
-        except RuntimeError:
-            msg: str = f"{self._identifier}: Can't connect to PLC"
-            errorLog(msg)
-            raise RuntimeError(msg)
+        return client.eb_read(var.offset.bytesOffset, var.bytesSize)
 
     def _writeVar(self, var: PLCVar, client: Client= None) -> bool:
         if client is None:
@@ -244,12 +252,7 @@ class PLCOutputs(PLCMemoryArea):
     def _readVar(self, var: PLCVar, client: Client= None) -> Optional[bytearray]:
         if client is None:
             client = self.parent.client
-        try:
-            return client.ab_read(var.offset.bytesOffset, var.bytesSize)
-        except RuntimeError:
-            msg: str = f"{self._identifier}: Can't connect to PLC"
-            errorLog(msg)
-            raise RuntimeError(msg)
+        return client.ab_read(var.offset.bytesOffset, var.bytesSize)
 
     def _writeVar(self, var: PLCVar, client: Client= None) -> None:
         if client is None:
@@ -297,12 +300,7 @@ class PLCMarkers(PLCMemoryArea):
     def _readVar(self, var: PLCVar, client: Client= None) -> Optional[bytearray]:
         if client is None:
             client = self.parent.client
-        try:
-            return client.mb_read(var.offset.bytesOffset, var.bytesSize)
-        except RuntimeError:
-            msg: str = f"{self._identifier}: Can't connect to PLC"
-            errorLog(msg)
-            raise RuntimeError(msg)
+        return client.mb_read(var.offset.bytesOffset, var.bytesSize)
 
     def _writeVar(self, var: PLCVar, client: Client= None) -> None:
         if client is None:
@@ -368,12 +366,7 @@ class PLCDB(PLCMemoryArea):
     def _readVar(self, var: PLCVar, client: Client= None) -> Optional[bytearray]:
         if client is None:
             client = self.parent.client
-        try:
-            return client.db_read(self.number, var.offset.bytesOffset, var.bytesSize)
-        except RuntimeError:
-            msg: str = f"{self._identifier}: Can't connect to PLC"
-            errorLog(msg)
-            raise RuntimeError(msg)
+        return client.db_read(self.number, var.offset.bytesOffset, var.bytesSize)
 
     def _writeVar(self, var: PLCVar, client: Client= None) -> None:
         if client is None:

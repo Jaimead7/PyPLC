@@ -10,7 +10,8 @@ from snap7 import Client
 
 from pyUtils import ConfigDict, ValidationClass, debugLog, errorLog, warningLog
 
-from .plcMemoryAreas import PLCDB, PLCInputs, PLCMarkers, PLCOutputs
+from .plcMemoryAreas import (PLCDB, PLCComunicationResult, PLCInputs,
+                             PLCMarkers, PLCOutputs)
 
 
 @dataclass
@@ -64,12 +65,12 @@ class PLCManager(ValidationClass):
                 warningLog(f'{self._identifier}: "Markers" not found in dict')
                 markers = None
             self.markers = PLCMarkers(fromDict= markers, parent= self)
-            self.dbs: list[PLCDB] = []
+            self.dbs: dict[int, PLCDB] = {}
             for key, value in fromDict.items():
                 if re.compile('^DB[0-9]+$').match(key):
-                    self.dbs.append(PLCDB(number= key[2:],
-                                          fromDict= value,
-                                          parent= self))
+                    self.dbs[int(key[2:])] = PLCDB(number= key[2:],
+                                                   fromDict= value,
+                                                   parent= self)
             self.connect()
         debugLog(f'{self._identifier}: Created')
 
@@ -142,9 +143,9 @@ class PLCManager(ValidationClass):
             raise TypeError(msg)
         return value
 
-    def validate_dbs(self, value: Any) -> list[PLCDB]:
+    def validate_dbs(self, value: Any) -> dict[int, PLCDB]:
         try:
-            value = ValidationClass.validateList(value, [PLCDB])
+            value = ValidationClass.validateDict(value, ((int), (PLCDB)))
         except TypeError:
             msg: str = f'Invalid type {self._identifier}.dbs: {value}'
             errorLog(msg)
@@ -173,28 +174,40 @@ class PLCManager(ValidationClass):
         self.readInputs()
         self.readOutputs()
         self.readMarkers()
-        self.readAllDB()
+        self.readDB()
         debugLog(f'{self._identifier}: Data readed')
 
     def readInputs(self) -> None:
-        self.inputs.readArea(self.client)
-        debugLog(f'{self._identifier}: Inputs readed')
+        if not self.isConnected():
+            return
+        result: int = self.inputs.readArea(self.client)
+        if result == PLCComunicationResult.NOT_CONNECTED:
+            self.disconnect()
 
     def readOutputs(self) -> None:
-        self.outputs.readArea(self.client)
-        debugLog(f'{self._identifier}: Outputs readed')
+        if not self.isConnected():
+            return
+        result: int = self.outputs.readArea(self.client)
+        if result == PLCComunicationResult.NOT_CONNECTED:
+            self.disconnect()
 
     def readMarkers(self) -> None:
-        self.markers.readArea(self.client)
-        debugLog(f'{self._identifier}: Markers readed')
+        if not self.isConnected():
+            return
+        result: int = self.markers.readArea(self.client)
+        if result == PLCComunicationResult.NOT_CONNECTED:
+            self.disconnect()
 
     def readDB(self, dbs: Optional[Iterable | PLCDB] = None) -> None:
+        if not self.isConnected():
+            return
         if dbs is None:
             dbs = self.dbs
         if isinstance(dbs, PLCDB):
-            dbs = tuple(dbs)
-        [db.readArea(self.client) for db in dbs]
-        debugLog(f'{self._identifier}: All DBs readed')
+            dbs = {dbs.number: dbs}
+        results: list = [db.readArea(self.client) for db in dbs.values()]
+        if PLCComunicationResult.NOT_CONNECTED in results:
+            self.disconnect()
 
     def downloadDatalog(self,
                         datalogName: str,

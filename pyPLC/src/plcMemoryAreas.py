@@ -5,39 +5,17 @@ from dataclasses import KW_ONLY, InitVar, dataclass, field
 from typing import TYPE_CHECKING, Any, Optional
 
 from snap7.client import Client
-from snap7.error import error_text
 
-from pyUtils import (ConfigDict, NoInstantiable, ValidationClass, debugLog,
-                     errorLog, warningLog)
+from pyUtils import ConfigDict, ValidationClass, debugLog, errorLog, warningLog
 
 if TYPE_CHECKING:
     from .plcManager import PLCManager
 
+from .plcComunication import PLCClientErrors, PLCComunicationResult
 from .plcVar import PLCReadWrite, PLCVar, PLCVarDict
 
 #TODO: manage Runtime exceptions in writeArea, writeVarToPLC
-#TODO: manage exceptions when client is none
-
-class PLCComunicationResult(NoInstantiable):
-    SUCCESS = 0
-    UNESPECIFY_ERROR = 100
-    NOT_CONNECTED = 101
-    INVALID_PARAMS = 102
-
-
-class PLCClientErrors(NoInstantiable):
-    NOT_CONNECTED = RuntimeError(error_text(0x92746))
-    INVALID_PARAMS = RuntimeError(error_text(0x200000))
-    
-    @staticmethod
-    def getStr(error: RuntimeError) -> str:
-        if str(error) == str(PLCClientErrors.NOT_CONNECTED):
-            return 'PLC not connected'
-        if str(error) == str(PLCClientErrors.INVALID_PARAMS):
-            return 'Invalid parameters'
-        return 'Unknown error'
-        
-
+#TODO: manage exceptions when parent.client is none
 
 @dataclass
 class PLCMemoryArea(ValidationClass, ABC):
@@ -52,6 +30,9 @@ class PLCMemoryArea(ValidationClass, ABC):
             fromDict = ConfigDict(self.validateDict(fromDict))
             self.setVarsFromDict(fromDict)
         debugLog(f'{self._identifier}: Created')
+
+    def __eq__(self, value) -> bool:
+        return isinstance(value, self.__class__)
 
     @property
     def _identifier(self) -> str:
@@ -109,7 +90,7 @@ class PLCMemoryArea(ValidationClass, ABC):
             errorLog(msg)
             raise KeyError(msg)
 
-    def readVarFromPLC(self, var: PLCVar | str, client: Client= None) -> Optional[Any]:
+    def readVarFromPLC(self, var: PLCVar | str, client: Client= None) -> int:
         if client is None:
             client = self.parent.client
         try:
@@ -117,15 +98,15 @@ class PLCMemoryArea(ValidationClass, ABC):
                 var = self.variables[var]
             self.variables[var.name].value = self._readVar(var, client)
             debugLog(f'{self._identifier}: "{self.variables[var.name]}" readed')
-            return self.variables[var.name].value
+            return PLCComunicationResult.SUCCESS
         except KeyError:
             msg: str = f'{self._identifier}: "{var}" not found in variables'
             errorLog(msg)
-            raise KeyError(msg)
+            return PLCComunicationResult.INVALID_PARAMS
         except RuntimeError as e:
             msg: str = f'{self._identifier}: Unable to read "{var}". {PLCClientErrors.getStr(e)}'
             errorLog(msg)
-            raise RuntimeError(e)
+            return self.manageRuntimeError(e)
 
     def writeArea(self, client: Client= None) -> None:
         if client is None:
@@ -175,6 +156,9 @@ class PLCMemoryArea(ValidationClass, ABC):
 
 @dataclass
 class PLCInputs(PLCMemoryArea):
+    def __eq__(self, value) -> bool:
+        return super().__eq__(value)
+
     def setVarsFromDict(self, fromDict: dict) -> None:
         if not isinstance(fromDict, ConfigDict):
             fromDict = ConfigDict(self.validateDict(fromDict))
@@ -223,6 +207,9 @@ class PLCInputs(PLCMemoryArea):
 
 @dataclass
 class PLCOutputs(PLCMemoryArea):
+    def __eq__(self, value) -> bool:
+        return super().__eq__(value)
+
     def setVarsFromDict(self, fromDict: ConfigDict) -> None:
         if not isinstance(fromDict, ConfigDict):
             fromDict = ConfigDict(self.validateDict(fromDict))
@@ -271,6 +258,9 @@ class PLCOutputs(PLCMemoryArea):
 
 @dataclass
 class PLCMarkers(PLCMemoryArea):
+    def __eq__(self, value) -> bool:
+        return super().__eq__(value)
+
     def setVarsFromDict(self, fromDict: ConfigDict) -> None:
         if not isinstance(fromDict, ConfigDict):
             fromDict = ConfigDict(self.validateDict(fromDict))
@@ -320,6 +310,11 @@ class PLCMarkers(PLCMemoryArea):
 @dataclass
 class PLCDB(PLCMemoryArea):
     number: int = 0
+
+    def __eq__(self, value) -> bool:
+        if super().__eq__(value):
+            return self.number == value.number
+        return False
 
     @property
     def _identifier(self) -> str:

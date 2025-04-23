@@ -8,6 +8,7 @@ class PLCComunicationResult(NoInstantiable):
     UNESPECIFY_ERROR = 100
     NOT_CONNECTED = 101
     INVALID_PARAMS = 102
+    READ_ONLY_VALUE = 103
 
 
 class PLCClientErrors(NoInstantiable):

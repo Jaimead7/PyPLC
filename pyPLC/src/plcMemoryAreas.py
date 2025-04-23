@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 from .plcComunication import PLCClientErrors, PLCComunicationResult
 from .plcVar import PLCReadWrite, PLCVar, PLCVarDict
 
-#TODO: manage Runtime exceptions in writeArea, writeVarToPLC
 #TODO: manage exceptions when parent.client is none
 
 @dataclass
@@ -108,14 +107,17 @@ class PLCMemoryArea(ValidationClass, ABC):
             errorLog(msg)
             return self.manageRuntimeError(e)
 
-    def writeArea(self, client: Client= None) -> None:
+    def writeArea(self, client: Client= None) -> int:
         if client is None:
             client = self.parent.client
-        [self._writeVar(var, client) for var in self.variables]
+        results: list[int] = [self._writeVar(var, client) for var in self.variables]
+        if PLCComunicationResult.NOT_CONNECTED in results:
+            return PLCComunicationResult.NOT_CONNECTED
         debugLog(f'{self._identifier}: Writed')
+        return PLCComunicationResult.SUCCESS
 
     @abstractmethod
-    def _writeVar(self, var: PLCVar, client: Client= None) -> bool:
+    def _writeVar(self, var: PLCVar, client: Client= None) -> int:
         ...
 
     def setVar(self, var: PLCVar | str, value: Any) -> None:
@@ -129,15 +131,16 @@ class PLCMemoryArea(ValidationClass, ABC):
             errorLog(msg)
             raise KeyError(msg)
 
-    def writeVarToPLC(self, var: PLCVar | str, value: Any, client: Client= None) -> None:
+    def writeVarToPLC(self, var: PLCVar | str, value: Any, client: Client= None) -> int:
         if client is None:
             client = self.parent.client
         try:
             if isinstance(var, str):
                 var = self.variables[var]
             self.variables[var.name].value = value
-            if self._writeVar(self.variables[var.name], client):
-                debugLog(f'{self._identifier}: {self.variables[var.name]} writed')
+            result: int = self._writeVar(self.variables[var.name], client)
+            debugLog(f'{self._identifier}: {self.variables[var.name]} writed')
+            return result
         except KeyError:
             msg: str = f'{self._identifier}: {var} not found in variables'
             errorLog(msg)
@@ -190,19 +193,23 @@ class PLCInputs(PLCMemoryArea):
             client = self.parent.client
         return client.eb_read(var.offset.bytesOffset, var.bytesSize)
 
-    def _writeVar(self, var: PLCVar, client: Client= None) -> bool:
+    def _writeVar(self, var: PLCVar, client: Client= None) -> int:
         if client is None:
             client = self.parent.client
-        if var.rw in (PLCReadWrite.READWRITE):
-            try:
-                value: Optional[bytearray] = var.getBytearray()
-            except TypeError as e:
-                errorLog(f"{self._identifier}: Can't write {var}. {e}")
-                return False
-            if value is not None:
-                client.eb_write(var.offset.bytesOffset, var.bytesSize, value)
-                return True
-        errorLog(f"{self._identifier}: Can't write {var}")
+        if var.rw not in (PLCReadWrite.READWRITE):
+            warningLog(f'{self._identifier}: Can\'t write "{var}". Read only value')
+            return PLCComunicationResult.READ_ONLY_VALUE
+        try:
+            value: Optional[bytearray] = var.getBytearray()
+        except TypeError as e:
+            errorLog(f'{self._identifier}: Can\'t write "{var}". {e}')
+            return PLCComunicationResult.INVALID_PARAMS
+        try:
+            client.eb_write(var.offset.bytesOffset, var.bytesSize, value)
+            return PLCComunicationResult.SUCCESS
+        except RuntimeError as e:
+            errorLog(f'{self._identifier}: Can\'t write "{var}". {e}')
+            return self.manageRuntimeError(e)
 
 
 @dataclass
@@ -244,16 +251,20 @@ class PLCOutputs(PLCMemoryArea):
     def _writeVar(self, var: PLCVar, client: Client= None) -> None:
         if client is None:
             client = self.parent.client
-        if var.rw in (PLCReadWrite.READWRITE):
-            try:
-                value: Optional[bytearray] = var.getBytearray()
-            except TypeError as e:
-                errorLog(f"{self._identifier}: Can't write {var}. {e}")
-                return False
-            if value is not None:
-                client.ab_write(var.offset.bytesOffset, var.bytesSize, value)
-                return True
-        errorLog(f"{self._identifier}: Can't write {var}")
+        if var.rw not in (PLCReadWrite.READWRITE):
+            warningLog(f'{self._identifier}: Can\'t write "{var}". Read only value')
+            return PLCComunicationResult.READ_ONLY_VALUE
+        try:
+            value: Optional[bytearray] = var.getBytearray()
+        except TypeError as e:
+            errorLog(f'{self._identifier}: Can\'t write "{var}". {e}')
+            return PLCComunicationResult.INVALID_PARAMS
+        try:
+            client.ab_write(var.offset.bytesOffset, var.bytesSize, value)
+            return PLCComunicationResult.SUCCESS
+        except RuntimeError as e:
+            errorLog(f'{self._identifier}: Can\'t write "{var}". {e}')
+            return self.manageRuntimeError(e)
 
 
 @dataclass
@@ -295,16 +306,20 @@ class PLCMarkers(PLCMemoryArea):
     def _writeVar(self, var: PLCVar, client: Client= None) -> None:
         if client is None:
             client = self.parent.client
-        if var.rw in (PLCReadWrite.READWRITE):
-            try:
-                value: Optional[bytearray] = var.getBytearray()
-            except TypeError as e:
-                errorLog(f"{self._identifier}: Can't write {var}. {e}")
-                return False
-            if value is not None:
-                client.mb_write(var.offset.bytesOffset, var.bytesSize, value)
-                return True
-        errorLog(f"{self._identifier}: Can't write {var}")
+        if var.rw not in (PLCReadWrite.READWRITE):
+            warningLog(f'{self._identifier}: Can\'t write "{var}". Read only value')
+            return PLCComunicationResult.READ_ONLY_VALUE
+        try:
+            value: Optional[bytearray] = var.getBytearray()
+        except TypeError as e:
+            errorLog(f'{self._identifier}: Can\'t write "{var}". {e}')
+            return PLCComunicationResult.INVALID_PARAMS
+        try:
+            client.mb_write(var.offset.bytesOffset, var.bytesSize, value)
+            return PLCComunicationResult.SUCCESS
+        except RuntimeError as e:
+            errorLog(f'{self._identifier}: Can\'t write "{var}". {e}')
+            return self.manageRuntimeError(e)
 
 
 @dataclass
@@ -366,13 +381,17 @@ class PLCDB(PLCMemoryArea):
     def _writeVar(self, var: PLCVar, client: Client= None) -> None:
         if client is None:
             client = self.parent.client
-        if var.rw in (PLCReadWrite.READWRITE):
-            try:
-                value: Optional[bytearray] = var.getBytearray()
-            except TypeError as e:
-                errorLog(f"{self._identifier}: Can't write {var}. {e}")
-                return False
-            if value is not None:
-                client.db_write(self.number, var.offset.bytesOffset, value)
-                return True
-        errorLog(f"{self._identifier}: Can't write {var}")
+        if var.rw not in (PLCReadWrite.READWRITE):
+            warningLog(f'{self._identifier}: Can\'t write "{var}". Read only value')
+            return PLCComunicationResult.READ_ONLY_VALUE
+        try:
+            value: Optional[bytearray] = var.getBytearray()
+        except TypeError as e:
+            errorLog(f'{self._identifier}: Can\'t write "{var}". {e}')
+            return PLCComunicationResult.INVALID_PARAMS
+        try:
+            client.db_write(self.number, var.offset.bytesOffset, value)
+            return PLCComunicationResult.SUCCESS
+        except RuntimeError as e:
+            errorLog(f'{self._identifier}: Can\'t write "{var}". {e}')
+            return self.manageRuntimeError(e)

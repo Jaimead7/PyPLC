@@ -188,7 +188,12 @@ class PLCVar(ValidationClass):
             raise TypeError(msg)
 
     def getBytearray(self, lastValue: bytearray = bytearray()) -> bytearray:
-        return self.varType.getBytearray(self.value, lastValue, self.offset.bitsOffset)
+        result = self.varType.getBytearray(self.value, lastValue, self.offset.bitsOffset)
+        if result is None:
+            msg: str = f'{self._identifier}.getBytearray(): value is None'
+            errorLog(msg)
+            raise TypeError(msg)
+        return result
 
     def fromMemoryArea(self, buffer: bytearray) -> None:
         result: bytearray = buffer[self.offset.bytesOffset : self.offset.bytesOffset + self.bytesSize]

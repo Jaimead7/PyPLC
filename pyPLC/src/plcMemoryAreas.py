@@ -110,7 +110,7 @@ class PLCMemoryArea(ValidationClass, ABC):
     def writeArea(self, client: Client= None) -> int:
         if client is None:
             client = self.parent.client
-        results: list[int] = [self._writeVar(var, client) for var in self.variables]
+        results: list[int] = [self._writeVar(var, client) for var in self.variables.values()]
         if PLCComunicationResult.NOT_CONNECTED in results:
             return PLCComunicationResult.NOT_CONNECTED
         debugLog(f'{self._identifier}: Writed')
@@ -142,9 +142,13 @@ class PLCMemoryArea(ValidationClass, ABC):
             debugLog(f'{self._identifier}: {self.variables[var.name]} writed')
             return result
         except KeyError:
-            msg: str = f'{self._identifier}: {var} not found in variables'
+            msg: str = f'{self._identifier}: "{var}" not found in variables'
             errorLog(msg)
-            raise KeyError(msg)
+            return PLCComunicationResult.INVALID_PARAMS
+        except RuntimeError as e:
+            msg: str = f'{self._identifier}: Unable to write "{var}". {PLCClientErrors.getStr(e)}'
+            errorLog(msg)
+            return self.manageRuntimeError(e)
 
     def manageRuntimeError(self, error: Exception) -> int:
         if str(error) == str(PLCClientErrors.NOT_CONNECTED):
@@ -196,7 +200,7 @@ class PLCInputs(PLCMemoryArea):
     def _writeVar(self, var: PLCVar, client: Client= None) -> int:
         if client is None:
             client = self.parent.client
-        if var.rw not in (PLCReadWrite.READWRITE):
+        if var.rw not in (PLCReadWrite.READWRITE,):
             warningLog(f'{self._identifier}: Can\'t write "{var}". Read only value')
             return PLCComunicationResult.READ_ONLY_VALUE
         try:
@@ -251,7 +255,7 @@ class PLCOutputs(PLCMemoryArea):
     def _writeVar(self, var: PLCVar, client: Client= None) -> None:
         if client is None:
             client = self.parent.client
-        if var.rw not in (PLCReadWrite.READWRITE):
+        if var.rw not in (PLCReadWrite.READWRITE,):
             warningLog(f'{self._identifier}: Can\'t write "{var}". Read only value')
             return PLCComunicationResult.READ_ONLY_VALUE
         try:
@@ -260,7 +264,7 @@ class PLCOutputs(PLCMemoryArea):
             errorLog(f'{self._identifier}: Can\'t write "{var}". {e}')
             return PLCComunicationResult.INVALID_PARAMS
         try:
-            client.ab_write(var.offset.bytesOffset, var.bytesSize, value)
+            client.ab_write(var.offset.bytesOffset, value)
             return PLCComunicationResult.SUCCESS
         except RuntimeError as e:
             errorLog(f'{self._identifier}: Can\'t write "{var}". {e}')
@@ -306,7 +310,7 @@ class PLCMarkers(PLCMemoryArea):
     def _writeVar(self, var: PLCVar, client: Client= None) -> None:
         if client is None:
             client = self.parent.client
-        if var.rw not in (PLCReadWrite.READWRITE):
+        if var.rw not in (PLCReadWrite.READWRITE,):
             warningLog(f'{self._identifier}: Can\'t write "{var}". Read only value')
             return PLCComunicationResult.READ_ONLY_VALUE
         try:
@@ -381,7 +385,7 @@ class PLCDB(PLCMemoryArea):
     def _writeVar(self, var: PLCVar, client: Client= None) -> None:
         if client is None:
             client = self.parent.client
-        if var.rw not in (PLCReadWrite.READWRITE):
+        if var.rw not in (PLCReadWrite.READWRITE,):
             warningLog(f'{self._identifier}: Can\'t write "{var}". Read only value')
             return PLCComunicationResult.READ_ONLY_VALUE
         try:

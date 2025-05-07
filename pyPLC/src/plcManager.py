@@ -200,7 +200,7 @@ class PLCManager(ValidationClass):
         if result == PLCComunicationResult.NOT_CONNECTED:
             self.disconnect()
 
-    def readDB(self, dbs: Optional[Iterable | PLCDB] = None) -> None:
+    def readDB(self, dbs: Optional[dict | PLCDB] = None) -> None:
         if not self.isConnected():
             return
         if dbs is None:
@@ -217,7 +217,7 @@ class PLCManager(ValidationClass):
         areas: tuple[PLCMemoryArea] = (self.inputs, self.outputs, self.markers, *self.dbs.values())
         for plcArea in areas:
             if area is None or plcArea == area:
-                result: int = plcArea.readVarFromPLC(var)
+                result: int = plcArea.readVarFromPLC(var, self.client)
                 if result == PLCComunicationResult.NOT_CONNECTED:
                     self.disconnect()
                     return PLCComunicationResult.NOT_CONNECTED
@@ -226,13 +226,67 @@ class PLCManager(ValidationClass):
         return PLCComunicationResult.INVALID_PARAMS
 
     def getVar(self, var: PLCVar | str, area: Optional[PLCMemoryArea] = None) -> int:
-        if not self.isConnected():
-            return PLCComunicationResult.NOT_CONNECTED
         areas: tuple[PLCMemoryArea] = (self.inputs, self.outputs, self.markers, *self.dbs.values())
         for plcArea in areas:
             if area is None or plcArea == area:
                 try:
                     return plcArea.getVar(var)
+                except KeyError:
+                    pass
+        raise KeyError(f'{self._identifier}: Variable "{var}" not found')
+
+    def writeInputs(self) -> None:
+        if not self.isConnected():
+            return
+        result: int = self.inputs.writeArea(self.client)
+        if result == PLCComunicationResult.NOT_CONNECTED:
+            self.disconnect()
+
+    def writeOutputs(self) -> None:
+        if not self.isConnected():
+            return
+        result: int = self.outputs.writeArea(self.client)
+        if result == PLCComunicationResult.NOT_CONNECTED:
+            self.disconnect()
+
+    def writeMarkers(self) -> None:
+        if not self.isConnected():
+            return
+        result: int = self.markers.writeArea(self.client)
+        if result == PLCComunicationResult.NOT_CONNECTED:
+            self.disconnect()
+
+    def writeDB(self, dbs: Optional[dict | PLCDB] = None) -> None:
+        if not self.isConnected():
+            return
+        if dbs is None:
+            dbs = self.dbs
+        if isinstance(dbs, PLCDB):
+            dbs = {dbs.number: dbs}
+        results: list = [db.writeArea(self.client) for db in dbs.values()]
+        if PLCComunicationResult.NOT_CONNECTED in results:
+            self.disconnect()
+
+    def writeVarToPLC(self, var: PLCVar | str, value: Any, area: Optional[PLCMemoryArea] = None) -> int:
+        if not self.isConnected():
+            return PLCComunicationResult.NOT_CONNECTED
+        areas: tuple[PLCMemoryArea] = (self.inputs, self.outputs, self.markers, *self.dbs.values())
+        for plcArea in areas:
+            if area is None or plcArea == area:
+                result: int = plcArea.writeVarToPLC(var, value, self.client)
+                if result == PLCComunicationResult.NOT_CONNECTED:
+                    self.disconnect()
+                    return PLCComunicationResult.NOT_CONNECTED
+                if result == PLCComunicationResult.SUCCESS:
+                    return PLCComunicationResult.SUCCESS
+        return PLCComunicationResult.INVALID_PARAMS
+
+    def setVar(self, var: PLCVar | str, value: Any, area: Optional[PLCMemoryArea] = None) -> int:
+        areas: tuple[PLCMemoryArea] = (self.inputs, self.outputs, self.markers, *self.dbs.values())
+        for plcArea in areas:
+            if area is None or plcArea == area:
+                try:
+                    return plcArea.setVar(var, value)
                 except KeyError:
                     pass
         raise KeyError(f'{self._identifier}: Variable "{var}" not found')

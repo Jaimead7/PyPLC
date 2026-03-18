@@ -15,6 +15,21 @@ class PLCReadWrite(IntEnum):
     READ_WRITE = 0
     READ = 1
 
+    @classmethod
+    def validate(cls, value: str | int | Self) -> Self:
+        if isinstance(value, cls):
+            return value
+        try:
+            return cls(int(value))
+        except (ValueError, TypeError):
+            pass
+        try:
+            value_clear: str = str(value).strip().upper()
+            return cls[value_clear]
+        except Exception:
+            pass
+        return cls['READ']
+
 
 class PLCMemoryOffset():
     def __init__(self, *args, **kwargs) -> None:

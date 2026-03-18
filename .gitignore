@@ -1,10 +1,31 @@
-# FOLDERS
-__pycache__
-.pytest_cache
-build
-*.egg-info
-
-# FILES
+# Project files
+*.db
+*.log
 delete*
-*.whl
-*.tar.gz
+
+# Python files
+__pycache__/
+build/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info
+Typings/
+
+# Tools
+.venv/
+venv/
+env/
+.env*
+!.env.example
+.pytest_cache/
+
+# Git
+.git/
+.gitignore
+
+# ide
+.vscode/
+.idea/
+*.swp
+*.swo

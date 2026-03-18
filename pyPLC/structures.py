@@ -3,7 +3,7 @@ from enum import IntEnum, unique
 from snap7.error import error_text
 from typing_extensions import Self
 
-from .logging import pyplc_logger
+from .logs import pyplc_logger
 
 
 @unique

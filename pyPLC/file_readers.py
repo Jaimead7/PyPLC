@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from typing import Any, Protocol
 
-from .logging import pyplc_logger
+from .logs import pyplc_logger
 
 
 class FileReader(Protocol):

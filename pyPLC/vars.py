@@ -6,13 +6,13 @@ from typing import Any, Type
 from pydantic import BaseModel, field_validator, model_validator
 from typing_extensions import Self
 
-from .logging import pyplc_logger
+from .logs import pyplc_logger
 from .var_types import PLCVarType, PLCVarTypesReg
 
 
 @unique
 class PLCReadWrite(IntEnum):
-    READWRITE = 0
+    READ_WRITE = 0
     READ = 1
 
 

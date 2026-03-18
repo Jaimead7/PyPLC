@@ -6,7 +6,7 @@ from typing import Any, ClassVar, NoReturn
 
 from typing_extensions import Self
 
-from .logging import pyplc_logger
+from .logs import pyplc_logger
 
 
 class PLCVarType():

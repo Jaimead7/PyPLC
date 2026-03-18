@@ -158,7 +158,7 @@ class PLCInputs(PLCMemoryArea):
             raise
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
-        if var.rw not in (PLCReadWrite.READWRITE,):
+        if var.rw not in (PLCReadWrite.READ_WRITE,):
             pyplc_logger.warning(f'{self}.{var} is a read only var.')
             return PLCComResult.READ_ONLY
         try:
@@ -215,7 +215,7 @@ class PLCOutputs(PLCMemoryArea):
             raise
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
-        if var.rw not in (PLCReadWrite.READWRITE,):
+        if var.rw not in (PLCReadWrite.READ_WRITE,):
             pyplc_logger.warning(f'{self}.{var} is a read only var')
             return PLCComResult.READ_ONLY
         try:
@@ -272,7 +272,7 @@ class PLCMarks(PLCMemoryArea):
             raise
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
-        if var.rw not in (PLCReadWrite.READWRITE,):
+        if var.rw not in (PLCReadWrite.READ_WRITE,):
             pyplc_logger.warning(f'{self}.{var} is a read only var.')
             return PLCComResult.READ_ONLY
         try:
@@ -351,7 +351,7 @@ class PLCDB(PLCMemoryArea):
             raise
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
-        if var.rw not in (PLCReadWrite.READWRITE,):
+        if var.rw not in (PLCReadWrite.READ_WRITE,):
             pyplc_logger.warning(f'{self}.{var} is a read only var')
             return PLCComResult.READ_ONLY
         try:

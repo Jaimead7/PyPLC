@@ -2,7 +2,7 @@ from struct import error as StructError
 
 from pytest import mark, raises
 
-from ..src.plcVarTypes import *
+from ..src.var_types import *
 
 
 class TestPLCBoolType:

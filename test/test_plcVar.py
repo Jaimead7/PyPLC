@@ -1,7 +1,7 @@
 from pytest import fixture, mark, raises
 
-from ..src.plcVar import *
-from ..src.plcVarTypes import *
+from ..src.var_types import *
+from ..src.vars import *
 
 
 class TestPLCReadWrite:
@@ -16,7 +16,7 @@ class TestPLCReadWrite:
         (0, PLCReadWrite.READWRITE),
     ])
     def test_validate(self, name: str, expected: int) -> None:
-        assert PLCReadWrite.validate(name) == expected
+        assert PLCReadWrite.is_valid(name) == expected
 
     @mark.parametrize('name', [
         'hello',
@@ -25,7 +25,7 @@ class TestPLCReadWrite:
     ])
     def test_validateErrors(self, name: str) -> None:
         with raises(TypeError):
-            _: int = PLCReadWrite.validate(name)
+            _: int = PLCReadWrite.is_valid(name)
 
 
 class TestPLCMemoryOffset:
@@ -39,8 +39,8 @@ class TestPLCMemoryOffset:
                             bytesOffset: int,
                             bitsOffset: int) -> None:
         offset = PLCMemoryOffset(input)
-        assert offset.bytesOffset == bytesOffset
-        assert offset.bitsOffset == bitsOffset
+        assert offset.bytes_offset == bytesOffset
+        assert offset.bits_offset == bitsOffset
 
     @mark.parametrize('input, bytesOffset, bitsOffset', [
         ((3, 7), 3, 7),
@@ -50,11 +50,11 @@ class TestPLCMemoryOffset:
                            bytesOffset: int,
                            bitsOffset: int) -> None:
         offset = PLCMemoryOffset(*input)
-        assert offset.bytesOffset == bytesOffset
-        assert offset.bitsOffset == bitsOffset
+        assert offset.bytes_offset == bytesOffset
+        assert offset.bits_offset == bitsOffset
         offset = PLCMemoryOffset(bytesOffset= input[0], bitsOffset= input[1])
-        assert offset.bytesOffset == bytesOffset
-        assert offset.bitsOffset == bitsOffset
+        assert offset.bytes_offset == bytesOffset
+        assert offset.bits_offset == bitsOffset
 
     @mark.parametrize('input', [
         '1.8',
@@ -121,8 +121,8 @@ class TestPLCVar:
                             bitsOffset: int,
                             plcVar: PLCVar) -> None:
         plcVar.offset = offset
-        assert plcVar.offset.bytesOffset == bytesOffset
-        assert plcVar.offset.bitsOffset == bitsOffset
+        assert plcVar.offset.bytes_offset == bytesOffset
+        assert plcVar.offset.bits_offset == bitsOffset
 
     @mark.parametrize('value', [
         (3, 8),
@@ -142,8 +142,8 @@ class TestPLCVar:
                              varType: Any,
                              expected: PLCVarType,
                              plcVar: PLCVar) -> None:
-        plcVar.varType = varType
-        assert plcVar.varType == expected
+        plcVar.var_type = varType
+        assert plcVar.var_type == expected
 
     @mark.parametrize('value', [
         'noVarType',
@@ -152,7 +152,7 @@ class TestPLCVar:
                                    value: Any,
                                    plcVar: PLCVar) -> None:
         with raises(TypeError):
-            plcVar.varType = value
+            plcVar.var_type = value
 
     @mark.parametrize('rw, expected', [
         (PLCReadWrite.READWRITE, PLCReadWrite.READWRITE),
@@ -176,7 +176,7 @@ class TestPLCVar:
 
     def test_validateValueNone(self, plcVar: PLCVar) -> None:
         for varType in PLCVarTypesFactory.TYPES.values():
-            plcVar.varType = varType
+            plcVar.var_type = varType
             plcVar.value = None
             assert plcVar.value == None
 
@@ -189,7 +189,7 @@ class TestPLCVar:
                            varType: PLCVarType,
                            result: Any,
                            plcVar: PLCVar) -> None:
-        plcVar.varType = varType
+        plcVar.var_type = varType
         plcVar.value = value
         assert plcVar.value == result
 
@@ -201,7 +201,7 @@ class TestPLCVar:
                                  value: Any,
                                  varType: PLCVarType,
                                  plcVar: PLCVar) -> None:
-        plcVar.varType = varType
+        plcVar.var_type = varType
         with raises(TypeError):
             plcVar.value = value
 
@@ -213,12 +213,12 @@ class TestPLCVar:
          'test',
          PLCMemoryOffset('2.1'),
          PLCVarTypesFactory.get('INT'),
-         PLCReadWrite.validate('REad')),
+         PLCReadWrite.is_valid('REad')),
         ({'foo': 'bar'},
          'example',
          PLCMemoryOffset('1.3'),
          PLCVarTypesFactory.get('real'),
-         PLCReadWrite.validate('readwrite'))
+         PLCReadWrite.is_valid('readwrite'))
     ])
     def test_fromDict(self,
                       fromDict: dict,
@@ -226,22 +226,22 @@ class TestPLCVar:
                       offset: PLCMemoryOffset,
                       varType: PLCVarType,
                       rw: int) -> None:
-        var = PLCVar('example', '1.3', 'real', 'readwrite', fromDict= fromDict)
+        var = PLCVar('example', '1.3', 'real', 'readwrite', from_dict= fromDict)
         assert var.name == name
         assert var.offset == offset
-        assert var.varType == varType
+        assert var.var_type == varType
         assert var.rw == rw
 
     @mark.parametrize('first, second', [
         (PLCVar(), PLCVar()),
         (PLCVar(name= 'test',
                 offset= '1.2',
-                varType= PLCVarTypesFactory.get('char'),
+                var_type= PLCVarTypesFactory.get('char'),
                 rw= 'read',
                 value= 'f'),
          PLCVar(name= 'test',
                 offset= '1.2',
-                varType= PLCVarTypesFactory.get('char'),
+                var_type= PLCVarTypesFactory.get('char'),
                 rw= 'readwrite',
                 value= 'b')),
         (PLCVar(name= 'test'), 'test'),
@@ -252,12 +252,12 @@ class TestPLCVar:
 
     def test_bytesSize(self, plcVar: PLCVar) -> None:
         for varType in PLCVarTypesFactory.TYPES.values():
-            plcVar.varType = varType
+            plcVar.var_type = varType
             if varType.BYTES == 0:
                 expected: int = 1
             else:
                 expected: int = varType.BYTES
-            assert plcVar.bytesSize == expected
+            assert plcVar.bytes_size == expected
 
 class TestPLCVarDict():
     @fixture

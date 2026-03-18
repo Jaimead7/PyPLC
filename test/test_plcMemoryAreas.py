@@ -1,6 +1,6 @@
 from pytest import fixture, mark, raises
 
-from ..src.plcMemoryAreas import *
+from ..src.memory_areas import *
 
 
 class TestPLCMemoryArea():

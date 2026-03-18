@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from enum import IntEnum, unique
 from re import match
-from typing import Any, Type
+from typing import Any, Optional
 
 from pydantic import BaseModel, field_validator, model_validator
 from typing_extensions import Self
@@ -100,7 +100,7 @@ class PLCMemoryOffset():
 class PLCVar(BaseModel):
     name: str
     offset: PLCMemoryOffset
-    var_type: Type[PLCVarType]
+    var_type: type[PLCVarType]
     rw: PLCReadWrite = PLCReadWrite.READ
     value: Any = None
 
@@ -128,10 +128,33 @@ class PLCVar(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Self:
-        ...
+        name: Optional[str] = None
+        offset: Optional[PLCMemoryOffset] = None
+        var_type: Optional[type[PLCVarType]] = None
+        rw: Optional[PLCReadWrite] = None
+        for key, value in data.items():
+            match key.upper():
+                case 'NAME':
+                    name = str(value)
+                case 'OFFSET':
+                    offset = PLCMemoryOffset(value)
+                case 'TYPE':
+                    var_type = PLCVarTypesReg.get(value)
+                case 'RW':
+                    rw = PLCReadWrite.validate(value)
+        if None in (name, offset, var_type, rw):
+            msg: str = f'Data doesn\'t have a valid {cls.__name__}.'
+            pyplc_logger.critical(msg)
+            raise ValueError(msg)
+        return cls(
+            name= name,  # type: ignore
+            offset= offset,  # type: ignore
+            var_type= var_type,  # type: ignore
+            rw= rw  # type: ignore
+        )
 
     @field_validator('var_type', mode= 'before')
-    def validate_var_type(cls, value: Any) -> Type[PLCVarType]:
+    def validate_var_type(cls, value: Any) -> type[PLCVarType]:
         if issubclass(value, PLCVarType):
             return value
         try:

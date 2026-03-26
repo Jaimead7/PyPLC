@@ -22,7 +22,6 @@ env/
 
 # Git
 .git/
-.gitignore
 
 # ide
 .vscode/

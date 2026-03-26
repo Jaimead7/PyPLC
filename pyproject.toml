@@ -45,7 +45,7 @@
         ]
 
     [project.urls]
-        Homepage = "https://github.com/Jaimead7/PyPLC/api"
+        Homepage = "https://github.com/Jaimead7/PyPLC"
         Repository = "https://github.com/Jaimead7/PyPLC"
 
 [tool.setuptools]

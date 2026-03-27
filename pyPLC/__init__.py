@@ -12,4 +12,4 @@ logger.disabled = True
 logger: logging.Logger = logging.getLogger('snap7.common')
 logger.disabled = True
 
-pyplc_logger.debug(f'Package loaded.', Styles.GREEN)
+pyplc_logger.debug(f'Package loaded.', Styles.SUCCEED)

@@ -3,7 +3,8 @@ from enum import IntEnum, unique
 from re import match
 from typing import Any, Optional
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
+from pydantic_core import CoreSchema, core_schema
 from typing_extensions import Self
 
 from .logs import pyplc_logger
@@ -41,9 +42,11 @@ class PLCMemoryOffset():
             elif isinstance(args[0], Sequence):
                 self._init_from_seq(args[0])
             else:
-                raise ValueError(f'{args} not valid for {self.__class__.__name__}.')
-        elif len(args) == 2:
-            self._init_from_seq(args[0][:2])
+                msg: str = f'{args} not valid for {self.__class__.__name__}.'
+                pyplc_logger.critical(msg)
+                raise ValueError(msg)
+        elif len(args) >= 2:
+            self._init_from_seq(args[:2])
         try:
             self._init_from_seq((
                 kwargs['bytes_offset'],
@@ -70,6 +73,40 @@ class PLCMemoryOffset():
         )
         return all(conditions)
 
+    def __get_pydantic_core_schema__(self, *args, **kwargs) -> CoreSchema:
+        return core_schema.no_info_plain_validator_function(
+            self._validate,
+            serialization= core_schema.plain_serializer_function_ser_schema(
+                self._serialize,
+                info_arg= False,
+                return_schema= core_schema.dict_schema(
+                    keys_schema= core_schema.str_schema(),
+                    values_schema= core_schema.int_schema()
+                )
+            )
+        )
+
+    @classmethod
+    def _validate(cls, value: Any) -> 'PLCMemoryOffset':
+        if isinstance(value, PLCMemoryOffset):
+            return value
+        if isinstance(value, dict):
+            return cls(**value)
+        if isinstance(value, (list, tuple)) and len(value) == 2:
+            return cls(bytes_offset= value[0], bits_offset= value[1])
+        if isinstance(value, str):
+            return cls(value)
+        msg: str = f'Can\'t convert {value} to {cls.__name__}.'
+        pyplc_logger.critical(msg)
+        raise ValueError(msg)
+
+    @classmethod
+    def _serialize(cls, value: 'PLCMemoryOffset') -> dict[str, int]:
+        return {
+            'bytes_offset': value.bytes_offset,
+            'bits_offset': value.bits_offset
+        }
+
     def _init_from_str(self, value: str) -> None:
         pattern = r'^\d+\.[0-7]'
         try:
@@ -80,7 +117,9 @@ class PLCMemoryOffset():
             byte_str, bit_str = value.split('.')
             self._init_from_seq((byte_str, bit_str))
         except ValueError:
-            raise ValueError(f'"{value}" is not a valid {self.__class__.__name__} str.')
+            msg: str = f'"{value}" is not a valid {self.__class__.__name__} str.'
+            pyplc_logger.critical(msg)
+            raise ValueError(msg)
 
     def _init_from_seq(self, value: Sequence) -> None:
         try:
@@ -89,12 +128,14 @@ class PLCMemoryOffset():
             byte_str, bit_str = value[:2]
             bytes_int: int = int(byte_str)
             bits_int: int = int(bit_str)
-            if bytes_int < 0 or bits_int < 0:
+            if bytes_int < 0 or bits_int < 0 or bits_int > 7:
                 raise ValueError
             self.bytes_offset = bytes_int
             self.bits_offset = bits_int
         except ValueError:
-            raise ValueError(f'"{value}" is not a valid {self.__class__.__name__} Sequence.')
+            msg: str = f'"{value}" is not a valid {self.__class__.__name__} Sequence.'
+            pyplc_logger.critical(msg)
+            raise ValueError(msg)
 
 
 class PLCVar(BaseModel):
@@ -103,6 +144,10 @@ class PLCVar(BaseModel):
     var_type: type[PLCVarType]
     rw: PLCReadWrite = PLCReadWrite.READ
     value: Any = None
+
+    model_config = ConfigDict(
+        validate_assignment= True
+    )
 
     def __str__(self) -> str:
         return f'{self.name}({self.var_type.__name__})'
@@ -120,7 +165,7 @@ class PLCVar(BaseModel):
         return super().__eq__(value)
 
     def __len__(self) -> int:  #INFO: if not defined pytest will fail if PLCVar is parametrize
-        return self.var_type.BYTES + self.var_type.BITS * 8
+        return self.var_type.BYTES * 8 + self.var_type.BITS
 
     @property
     def bytes_size(self) -> int:
@@ -155,8 +200,11 @@ class PLCVar(BaseModel):
 
     @field_validator('var_type', mode= 'before')
     def validate_var_type(cls, value: Any) -> type[PLCVarType]:
-        if issubclass(value, PLCVarType):
-            return value
+        try:
+            if issubclass(value, PLCVarType):
+                return value
+        except TypeError:
+            pass
         try:
             return PLCVarTypesReg.get(str(value))
         except ValueError:
@@ -164,17 +212,25 @@ class PLCVar(BaseModel):
             pyplc_logger.error(msg)
             raise ValueError(msg)
 
-    @model_validator(mode= 'after')
-    def validate_value(self) -> Any:
-        if self.value is None:
-            return
+    @field_validator('value')
+    def validate_value(cls, value: Any, info: ValidationInfo) -> Any:
+        var_type: Optional[type[PLCVarType]] = info.data.get('var_type')
+        offset: Optional[PLCMemoryOffset] = info.data.get('offset')
+        if value is None or var_type is None or offset is None:
+            return None
         try:
-            self.value = self.var_type.validate_value(self.value, self.offset.bits_offset)
+            return var_type.validate_value(
+                value,
+                offset.bits_offset
+            )
         except ValueError:
-            msg: str = f'Invalid value for {self.__class__.__name__} of type "{self.var_type.NAME}": {self.value}'
-            self.value = None
+            msg: str = f'Invalid value for {cls.__name__} of type "{var_type.NAME}": {value}.'
             pyplc_logger.error(msg)
             raise ValueError(msg)
+
+    @field_validator('rw', mode= 'before')
+    def validate_rw(cls, value: Any) -> PLCReadWrite:
+        return PLCReadWrite.validate(value)
 
     def get_bytes_array(self, last_value: bytearray = bytearray()) -> bytearray:
         try:
@@ -207,7 +263,9 @@ class PLCVarDict(dict[str, PLCVar]):
 
     def __setitem__(self, key, value) -> None:
         if not isinstance(value, PLCVar):
-            raise TypeError(f'{self.__class__.__name__}: {value} is not type PLCVar.')
+            msg: str = f'{self.__class__.__name__}: {value} is not type PLCVar.'
+            pyplc_logger.critical(msg)
+            raise ValueError(msg)
         key_str: str = str(key)
         return super().__setitem__(key_str, value)
 
@@ -224,9 +282,36 @@ class PLCVarDict(dict[str, PLCVar]):
         new_dict.update(other)
         return new_dict
 
+    def __get_pydantic_core_schema__(self, *args, **kwargs) -> CoreSchema:
+        return core_schema.no_info_plain_validator_function(
+            self._validate,
+            serialization= core_schema.plain_serializer_function_ser_schema(
+                self._serialize,
+                info_arg= False,
+                return_schema= core_schema.dict_schema(
+                    keys_schema= core_schema.str_schema(),
+                    values_schema= core_schema.int_schema()
+                )
+            )
+        )
+
+    @classmethod
+    def _validate(cls, value: Any) -> 'PLCVarDict':
+        if isinstance(value, PLCVarDict):
+            return value
+        msg: str = f'Can\'t convert {value} to {cls.__name__}.'
+        pyplc_logger.critical(msg)
+        raise ValueError(msg)
+
+    @classmethod
+    def _serialize(cls, value: 'PLCVarDict') -> dict[str, PLCVar]:
+        return value
+
     def update(self, *args, **kwargs) -> None:
         if len(args) > 1:
-            raise TypeError(f'Update expected at most 1 argument, got {len(args)}')
+            msg: str = f'Update expected at most 1 argument, got {len(args)}'
+            pyplc_logger.error(msg)
+            raise ValueError(msg)
         if args:
             other: Any = args[0]
             if isinstance(other, dict):

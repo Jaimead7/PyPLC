@@ -9,7 +9,7 @@ from typing_extensions import Self
 from .logs import pyplc_logger
 
 
-class PLCVarType():
+class PLCVarType:
     NAME: ClassVar[str] = ''
     BYTES: ClassVar[int] = 0
     BITS: ClassVar[int] = 0
@@ -44,7 +44,7 @@ class PLCVarType():
         raise NotImplementedError(msg)
 
 
-class PLCVarTypesReg():
+class PLCVarTypesReg:
     _plc_var_types: ClassVar[dict[str, type[PLCVarType]]] = {}
 
     def __new__(cls) -> Self:
@@ -102,7 +102,7 @@ class PLCBoolType(PLCVarType):
             if isinstance(value, bytearray):
                 return int.from_bytes(value, 'big') & 2 ** pos != 0
             return bool(value)
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -122,7 +122,7 @@ class PLCBoolType(PLCVarType):
             else:
                 mask = int(int(2 ** pos) ^ 255)
                 return bytearray(pack('>B', mask & int.from_bytes(last_value, 'big')))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -142,7 +142,7 @@ class PLCByteType(PLCVarType):
             if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 raise ValueError
             return value
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -151,7 +151,7 @@ class PLCByteType(PLCVarType):
         try:
             value = int(value)
             return bytearray(pack('>b', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -171,7 +171,7 @@ class PLCWordType(PLCVarType):
             if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 raise ValueError
             return value
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -180,7 +180,7 @@ class PLCWordType(PLCVarType):
         try:
             value = int(value)
             return bytearray(pack('>h', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -200,7 +200,7 @@ class PLCDWordType(PLCVarType):
             if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 raise ValueError
             return value
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -209,7 +209,7 @@ class PLCDWordType(PLCVarType):
         try:
             value = int(value)
             return bytearray(pack('>l', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -229,7 +229,7 @@ class PLCIntType(PLCVarType):
             if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 raise ValueError
             return value
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -238,7 +238,7 @@ class PLCIntType(PLCVarType):
         try:
             value = int(value)
             return bytearray(pack('>h', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -260,7 +260,7 @@ class PLCUIntType(PLCVarType):
             if value not in range(0, (2**(8*cls.BYTES))):
                 raise ValueError
             return value
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -271,7 +271,7 @@ class PLCUIntType(PLCVarType):
             if value < 0:
                 raise ValueError
             return bytearray(pack('>H', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -291,7 +291,7 @@ class PLCSIntType(PLCVarType):
             if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 raise ValueError
             return value
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -300,7 +300,7 @@ class PLCSIntType(PLCVarType):
         try:
             value = int(value)
             return bytearray(pack('>b', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -322,7 +322,7 @@ class PLCUSIntType(PLCVarType):
             if value not in range(0, (2**(8*cls.BYTES))):
                 raise ValueError
             return value
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -333,7 +333,7 @@ class PLCUSIntType(PLCVarType):
             if value < 0:
                 raise ValueError
             return bytearray(pack('>B', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -353,7 +353,7 @@ class PLCDIntType(PLCVarType):
             if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 raise ValueError
             return value
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -362,7 +362,7 @@ class PLCDIntType(PLCVarType):
         try:
             value = int(value)
             return bytearray(pack('>l', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -384,7 +384,7 @@ class PLCUDIntType(PLCVarType):
             if value not in range(0, (2**(8*cls.BYTES))):
                 raise ValueError
             return value
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -395,7 +395,7 @@ class PLCUDIntType(PLCVarType):
             if value < 0:
                 raise ValueError
             return bytearray(pack('>L', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -412,7 +412,7 @@ class PLCRealType(PLCVarType):
             if isinstance(value, bytearray):
                 return unpack('>f', value)[0]
             return float(value)
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -421,7 +421,7 @@ class PLCRealType(PLCVarType):
         try:
             value = float(value)
             return bytearray(pack('>f', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -438,7 +438,7 @@ class PLCLRealType(PLCVarType):
             if isinstance(value, bytearray):
                 return unpack('>d', value)[0]
             return float(value)
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -447,7 +447,7 @@ class PLCLRealType(PLCVarType):
         try:
             value = float(value)
             return bytearray(pack('>d', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -467,7 +467,7 @@ class PLCTimeType(PLCVarType):
             if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
                 raise ValueError
             return time(second= value/1000)
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -481,7 +481,7 @@ class PLCTimeType(PLCVarType):
                 value += value.microsecond / 1000
             value = int(value)
             return bytearray(pack('>l', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -503,7 +503,7 @@ class PLCDateType(PLCVarType):
             if value not in range(0, (2**(8*cls.BYTES))):
                 raise ValueError
             return date(year= 1990, month= 1, day= 1) + timedelta(days= value)
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -516,7 +516,7 @@ class PLCDateType(PLCVarType):
             if value < 0:
                 raise ValueError
             return bytearray(pack('>H', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -540,7 +540,7 @@ class PLCCharType(PLCVarType):
             if isinstance(value, str):
                 return value[0]
             return chr(int(value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 
@@ -549,7 +549,7 @@ class PLCCharType(PLCVarType):
         try:
             value = int(value)
             return bytearray(pack('>b', value))
-        except (ValueError, TypeError, StructError):
+        except (ValueError, TypeError, StructError, OverflowError):
             pass
         cls._raise_value_error(value)
 

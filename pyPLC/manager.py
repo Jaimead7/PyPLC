@@ -31,7 +31,7 @@ class PLCManager(BaseModel):
         return f'{self.__class__.__name__}({self.name})'
 
     @field_validator('ip')
-    def validate_ip(self, value: str) -> str:
+    def validate_ip(cls, value: str) -> str:
         try:
             ip_pattern = r'^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$'
             if not re.match(ip_pattern, str(value)):

@@ -25,8 +25,8 @@ class PLCMemoryArea(BaseModel, ABC):
     def name(self) -> str:
         return f'{self.__class__.__name__}'
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def from_dict(cls, data: dict[str, Any]) -> Self:
         ...
 

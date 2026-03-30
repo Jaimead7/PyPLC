@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 from snap7 import Client
 from typing_extensions import Self
 
-from .file_readers import FileReader, yaml_reader
+from .file_readers import FileReader, FileReaderReg
 from .logs import Styles, pyplc_logger
 from .memory_areas import PLCDB, PLCInputs, PLCMarks, PLCMemoryArea, PLCOutputs
 from .structures import PLCComResult
@@ -55,8 +55,13 @@ class PLCManager(BaseModel):
         cls,
         name: str,
         file_path: Path,
-        reader: FileReader = yaml_reader
+        reader: Optional[FileReader] = None
     ) -> Self:
+        try:
+            if reader is None:
+                reader = FileReaderReg.from_file(file_path)
+        except ValueError:
+            raise
         try:
             data: dict[str, Any] = reader(file_path)
         except (FileNotFoundError, ImportError, RuntimeError):

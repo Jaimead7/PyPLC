@@ -1,7 +1,8 @@
 import logging
 
+from .file_readers import FileReader, FileReaderReg
 from .logs import Styles, pyplc_logger
-from .manager import *
+from .manager import PLCManager
 from .memory_areas import (PLCDB, PLCInputs, PLCMarks, PLCMemoryArea,
                            PLCOutputs, PLCReadWrite, PLCVarDict)
 from .var_types import PLCVarType, PLCVarTypesReg

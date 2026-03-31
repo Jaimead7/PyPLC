@@ -1,6 +1,6 @@
 # PyPLC
 
-Siemens S7 PLCs communication with python-snap7.  
+Wrapper for [python-snap7](https://python-snap7.readthedocs.io/en/latest/) library.  
 <br>
 [![Tests indicator](https://github.com/Jaimead7/PyPLC/actions/workflows/python310-lint-test.yml/badge.svg)](https://github.com/Jaimead7/PyPLC/actions/workflows/python310-lint-test.yml)  
 [![License](https://img.shields.io/static/v1.svg?label=LICENSE&message=MIT&color=2dba4e&colorA=2b3137)](https://github.com/Jaimead7/PyPLC/blob/master/LICENSE)  
@@ -16,11 +16,7 @@ Install as a package from source files
 ```powershell
 git clone https://github.com/Jaimead7/PyPLC.git
 cd PyPLC
-py -m pip install wheel tomli
-py setup.py bdist_wheel
-py -m pip install ./dist/jaimead7_pyplc-x.x.x-py3-none-any.whl
-cd ..
-rm -r PyPLC
+py -m pip install .
 ```
 
 Install as a package from pypi
@@ -29,7 +25,20 @@ py -m pip install jaimead7-pyplc
 ```
 
 ## Usage
+Create a `.toml` file with the structure descrived in [./docs/examples/plc.toml](./docs/examples/plc.toml).
 
+```python
+from pathlib import Path
+import pyPLC
+
+file_path: Path = Path('./docs/examples/plc.toml')
+manager: PyPLC = PyPLC.from_file(file_path)
+ret = manager.connect()
+
+ret, value = manager.read_var(var= 'Var1')  # value = 10.5
+ret, value = manager.write_var(var= 'Var1', value= 3.4)
+ret, value = manager.read_var(var= 'Var1')  # value = 3.4
+```
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first

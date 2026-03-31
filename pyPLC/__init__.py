@@ -1,16 +1,17 @@
 import logging
 
-from pyUtils import Styles, debugLog
-
-from .src.plcManager import *
-from .src.plcMemoryAreas import (PLCDB, PLCInputs, PLCMarkers, PLCMemoryArea,
-                                 PLCOutputs, PLCReadWrite, PLCVarDict)
-from .src.plcVar import PLCMemoryOffset, PLCReadWrite, PLCVar
-from .src.plcVarTypes import PLCVarType, PLCVarTypesFactory
+from .file_readers import FileReader, FileReaderReg
+from .logs import Styles, pyplc_logger
+from .manager import PLCManager
+from .memory_areas import (PLCDB, PLCInputs, PLCMarks, PLCMemoryArea,
+                           PLCOutputs, PLCReadWrite, PLCVarDict)
+from .structures import PLCClientErrors, PLCComResult
+from .var_types import PLCVarType, PLCVarTypesReg
+from .vars import PLCMemoryOffset, PLCReadWrite, PLCVar
 
 logger: logging.Logger = logging.getLogger('snap7.client')
 logger.disabled = True
 logger: logging.Logger = logging.getLogger('snap7.common')
 logger.disabled = True
 
-debugLog(f'Package loaded: myPLC', Styles.GREEN)
+pyplc_logger.debug(f'Package loaded.', Styles.SUCCEED)

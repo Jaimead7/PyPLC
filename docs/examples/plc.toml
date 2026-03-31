@@ -30,12 +30,12 @@
                 RW = 'Read'
         [plc.Test.Marks]
             Size = 11
-            [plc.Test.Outputs.M00]
+            [plc.Test.Marks.M00]
                 Name = 'M0.0'
                 Offset = '0.0'
                 Type = 'Bool'
                 RW = 'ReadWrite'
-            [plc.Test.Outputs.MW10]
+            [plc.Test.Marks.MW10]
                 Name = 'MW10'
                 Offset = '10.0'
                 Type = 'Word'
@@ -43,7 +43,7 @@
         [plc.Test.DB10]
             Number = 10
             Size = 11
-            [plc.Test.Outputs.Var1]
+            [plc.Test.DB10.Var1]
                 Name = 'Var1'
                 Offset = '0.0'
                 Type = 'Real'

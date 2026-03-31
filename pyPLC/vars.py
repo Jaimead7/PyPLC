@@ -3,7 +3,8 @@ from enum import IntEnum, unique
 from re import match
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
+from pydantic import (BaseModel, ConfigDict, ValidationInfo, field_serializer,
+                      field_validator)
 from pydantic_core import CoreSchema, core_schema
 from typing_extensions import Self
 
@@ -62,6 +63,8 @@ class PLCMemoryOffset():
         return f'{self.__class__.__name__}({self.bytes_offset}.{self.bits_offset})'
 
     def __eq__(self, other: object) -> bool:
+        if other is None:
+            return False
         if not isinstance(other, PLCMemoryOffset):
             try:
                 other = PLCMemoryOffset(other)
@@ -150,7 +153,10 @@ class PLCVar(BaseModel):
     )
 
     def __str__(self) -> str:
-        return f'{self.name}({self.var_type.__name__})'
+        return f'{self.name}[{self.var_type.__name__}]'
+
+    def __repr__(self) -> str:
+        return f'{self.name}[type: {self.var_type.__name__}, offset: {self.offset}, rw: {self.rw}, value: {self.value}]'
 
     def __eq__(self, value: object) -> bool:
         if isinstance(value, self.__class__):
@@ -197,6 +203,10 @@ class PLCVar(BaseModel):
             var_type= var_type,  # type: ignore
             rw= rw  # type: ignore
         )
+
+    @field_serializer('var_type')
+    def serialize_var_type(self, var_type: type[PLCVarType]) -> str:
+        return var_type.__name__
 
     @field_validator('var_type', mode= 'before')
     def validate_var_type(cls, value: Any) -> type[PLCVarType]:
@@ -281,6 +291,12 @@ class PLCVarDict(dict[str, PLCVar]):
         new_dict: Self = self.__class__(self)
         new_dict.update(other)
         return new_dict
+
+    def __str__(self) -> str:
+        return str([str(value) for value in self.values()])
+
+    def __repr__(self) -> str:
+        return str(list(self.values()))
 
     def __get_pydantic_core_schema__(self, *args, **kwargs) -> CoreSchema:
         return core_schema.no_info_plain_validator_function(

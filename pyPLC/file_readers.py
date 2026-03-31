@@ -14,7 +14,7 @@ class FileReader(Protocol):
 
 
 class FileReaderReg:
-    _file_readers: ClassVar[dict[str, FileReader]]
+    _file_readers: ClassVar[dict[str, FileReader]] = {}
     
     def __new__(cls) -> Self:
         msg: str = f'"{cls.__name__}" is not instantiable.'
@@ -54,7 +54,7 @@ class FileReaderReg:
     def from_file(cls, file: Path) -> FileReader:
         try:
             ex: str = file.suffix
-            return cls.get(ex)
+            return cls.get(ex.replace('.', ''))
         except ValueError:
             msg: str = f'Could not obtain a FileReader for {file.name}.'
             pyplc_logger.error(msg)

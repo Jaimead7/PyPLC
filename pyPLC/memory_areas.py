@@ -16,7 +16,10 @@ class PLCMemoryArea(BaseModel, ABC):
     size: int = Field(ge= 0, default= 0)
 
     def __str__(self) -> str:
-        return f'{self.name}'
+        return f'{self.name}{self.vars}'
+
+    def __repr__(self) -> str:
+        return f'{self.name}{repr(self.vars)}'
 
     def __eq__(self, value: Any) -> bool:
         return isinstance(value, self.__class__)

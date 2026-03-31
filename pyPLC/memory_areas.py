@@ -16,7 +16,7 @@ class PLCMemoryArea(BaseModel, ABC):
     size: int = Field(ge= 0, default= 0)
 
     def __str__(self) -> str:
-        return f'{self.name}{self.vars}'
+        return f'{self.name}'
 
     def __repr__(self) -> str:
         return f'{self.name}{repr(self.vars)}'
@@ -60,7 +60,7 @@ class PLCMemoryArea(BaseModel, ABC):
             if isinstance(var, str):
                 var = self.vars[var]
             self.vars[var.name].value = self._read_var(var, client)
-            pyplc_logger.debug(f'{self}: "{self.vars[var.name]}" readed.')
+            pyplc_logger.debug(f'{self}.{self.vars[var.name]} readed.')
             return (PLCComResult.SUCCESS, self.vars[var.name].value)
         except KeyError:
             msg: str = f'{self}.{var} not found in variables.'

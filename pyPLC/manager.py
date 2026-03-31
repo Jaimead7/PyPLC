@@ -151,9 +151,9 @@ class PLCManager(BaseModel):
         )
 
     def connect(self) -> PLCComResult:
-        self.client: Client = Client()
+        self._client: Client = Client()
         try:
-            self.client.connect(
+            self._client.connect(
                 address= self.ip,
                 rack= self.rack,
                 slot= self.slot,
@@ -167,7 +167,7 @@ class PLCManager(BaseModel):
 
     def disconnect(self) -> PLCComResult:
         try:
-            self.client.disconnect()
+            self._client.disconnect()
             pyplc_logger.debug(f'{self}: PLC disconnected.')
             return PLCComResult.SUCCESS
         except Exception as e:
@@ -176,7 +176,7 @@ class PLCManager(BaseModel):
 
     def is_connected(self) -> bool:
         try:
-            return self.client.get_connected()
+            return self._client.get_connected()
         except AttributeError:
             return False
 
@@ -193,7 +193,7 @@ class PLCManager(BaseModel):
                 return PLCComResult.NOT_CONNECTED
         if self.inputs is None:
             return PLCComResult.NO_ACTION
-        result: PLCComResult = self.inputs.read_area(self.client)
+        result: PLCComResult = self.inputs.read_area(self._client)
         if result == PLCComResult.NOT_CONNECTED:
             self.disconnect()
         return result
@@ -204,7 +204,7 @@ class PLCManager(BaseModel):
                 return PLCComResult.NOT_CONNECTED
         if self.outputs is None:
             return PLCComResult.NO_ACTION
-        result: PLCComResult = self.outputs.read_area(self.client)
+        result: PLCComResult = self.outputs.read_area(self._client)
         if result == PLCComResult.NOT_CONNECTED:
             self.disconnect()
         return result
@@ -215,7 +215,7 @@ class PLCManager(BaseModel):
                 return PLCComResult.NOT_CONNECTED
         if self.marks is None:
             return PLCComResult.NO_ACTION
-        result: PLCComResult = self.marks.read_area(self.client)
+        result: PLCComResult = self.marks.read_area(self._client)
         if result == PLCComResult.NOT_CONNECTED:
             self.disconnect()
         return result
@@ -228,7 +228,7 @@ class PLCManager(BaseModel):
             dbs = tuple(self.dbs.keys())
         results: list[PLCComResult] = []
         results = [
-            db.read_area(self.client)
+            db.read_area(self._client)
             for db in self.dbs.values()
             if db in dbs
         ]
@@ -248,11 +248,11 @@ class PLCManager(BaseModel):
             if not self.connect().is_error():
                 return (PLCComResult.NOT_CONNECTED, None)
         for plc_area in self.memory_areas:
-            if area is not None or plc_area != area:
+            if area is not None and plc_area != area:
                 continue
             ret: PLCComResult
             value: Any
-            ret, value = plc_area.read_var(var, self.client)
+            ret, value = plc_area.read_var(var, self._client)
             if ret == PLCComResult.NOT_CONNECTED:
                 self.disconnect()
                 return (ret, None)
@@ -279,7 +279,7 @@ class PLCManager(BaseModel):
                 return PLCComResult.NOT_CONNECTED
         if self.inputs is None:
             return PLCComResult.NO_ACTION
-        result: PLCComResult = self.inputs.write_area(self.client)
+        result: PLCComResult = self.inputs.write_area(self._client)
         if result == PLCComResult.NOT_CONNECTED:
             self.disconnect()
         return result
@@ -290,7 +290,7 @@ class PLCManager(BaseModel):
                 return PLCComResult.NOT_CONNECTED
         if self.outputs is None:
             return PLCComResult.NO_ACTION
-        result: PLCComResult = self.outputs.write_area(self.client)
+        result: PLCComResult = self.outputs.write_area(self._client)
         if result == PLCComResult.NOT_CONNECTED:
             self.disconnect()
         return result
@@ -301,7 +301,7 @@ class PLCManager(BaseModel):
                 return PLCComResult.NOT_CONNECTED
         if self.marks is None:
             return PLCComResult.NO_ACTION
-        result: PLCComResult = self.marks.write_area(self.client)
+        result: PLCComResult = self.marks.write_area(self._client)
         if result == PLCComResult.NOT_CONNECTED:
             self.disconnect()
         return result
@@ -314,7 +314,7 @@ class PLCManager(BaseModel):
             dbs = tuple(self.dbs.keys())
         results: list[PLCComResult] = []
         results = [
-            db.write_area(self.client)
+            db.write_area(self._client)
             for db in self.dbs.values()
             if db in dbs
         ]
@@ -335,19 +335,19 @@ class PLCManager(BaseModel):
             if not self.connect().is_error():
                 return (PLCComResult.NOT_CONNECTED, None)
         for plc_area in self.memory_areas:
-            if area is not None or plc_area != area:
+            if area is not None and plc_area != area:
                 continue
             ret: PLCComResult
-            ret, value = plc_area.write_var(
+            ret, res_value = plc_area.write_var(
                 var= var,
                 value= value,
-                client= self.client
+                client= self._client
             )
             if ret == PLCComResult.NOT_CONNECTED:
                 self.disconnect()
                 return (ret, None)
             if ret == PLCComResult.SUCCESS:
-                return (ret, value)
+                return (ret, res_value)
         return (PLCComResult.INVALID_PARAMS, None)
 
     def set_var(

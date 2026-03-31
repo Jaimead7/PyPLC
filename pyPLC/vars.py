@@ -153,7 +153,7 @@ class PLCVar(BaseModel):
     )
 
     def __str__(self) -> str:
-        return f'{self.name}[{self.var_type.__name__}]'
+        return f'{self.name}'
 
     def __repr__(self) -> str:
         return f'{self.name}[type: {self.var_type.__name__}, offset: {self.offset}, rw: {self.rw}, value: {self.value}]'
@@ -269,7 +269,13 @@ class PLCVarDict(dict[str, PLCVar]):
 
     def __getitem__(self, key) -> PLCVar:
         key_str: str = str(key)
-        return super().__getitem__(key_str)
+        try:
+            return super().__getitem__(key_str)
+        except KeyError:
+            for var in self.values():
+                if var.name == key_str:
+                    return var
+            raise
 
     def __setitem__(self, key, value) -> None:
         if not isinstance(value, PLCVar):

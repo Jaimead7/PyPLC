@@ -1,10 +1,11 @@
-# PyPLC
+<div align="center">
+  <h1>PyPLC</h1>
+  <a href="https://github.com/Jaimead7/PyPLC/actions/workflows/python-tests.yml"><img src="https://github.com/Jaimead7/PyPLC/actions/workflows/python-tests.yml/badge.svg"></a>
+  <a href="https://github.com/Jaimead7/PyPLC/blob/master/LICENSE"><img src="https://img.shields.io/static/v1.svg?label=LICENSE&message=MIT&color=2dba4e&colorA=2b3137"></a>
+  <a href="https://pypi.org/project/jaimead7-pyplc/"><img src="https://img.shields.io/pypi/v/jaimead7-pyplc.svg?color=2dba4e"></a>
+</div>
 
 Wrapper for [python-snap7](https://python-snap7.readthedocs.io/en/latest/) library.  
-<br>
-[![Tests indicator](https://github.com/Jaimead7/PyPLC/actions/workflows/python310-lint-test.yml/badge.svg)](https://github.com/Jaimead7/PyPLC/actions/workflows/python310-lint-test.yml)  
-[![License](https://img.shields.io/static/v1.svg?label=LICENSE&message=MIT&color=2dba4e&colorA=2b3137)](https://github.com/Jaimead7/PyPLC/blob/master/LICENSE)  
-[![PyPI Latest Release](https://img.shields.io/pypi/v/jaimead7-pyplc.svg?color=2dba4e)](https://pypi.org/project/jaimead7-pyplc/)
 
 ## Authors
 > Jaime Alvarez Diaz  

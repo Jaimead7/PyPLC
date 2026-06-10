@@ -4,7 +4,7 @@
 
 [project]
     name = "jaimead7-pyplc"
-    version = "0.0.1"
+    version = "0.0.2"
     description = "Siemens S7 PLCs communication with python-snap7."
     authors = [
         {name = "Jaime Álvarez", email = "alvarez.diaz.jaime1@gmail.com"},

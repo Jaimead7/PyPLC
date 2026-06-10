@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-import requests
+import httpx
 from pydantic import BaseModel, Field, field_validator
 from snap7 import Client
 from typing_extensions import Self
@@ -372,22 +372,30 @@ class PLCManager(BaseModel):
         datalog_name: str,
         filePath: Path = Path.home() / 'Downloads'
     ) -> PLCComResult:
-        try:
-            response: requests.Response = requests.get(
-                f'http://{self.ip}/DataLog.html?&FileName={datalog_name}.csv',
-                verify= False
-            )
-            if response.content == '':
-                raise ValueError
-            date: str = str(datetime.now(timezone.utc).date()).replace('-','')
-            with open(filePath / f'{date}-{datalog_name}.csv', 'wb') as file:
-                file.write(response.content)
-            pyplc_logger.debug(f'{self}: Readed DataLog({datalog_name}).')
-            return PLCComResult.SUCCESS
-        except requests.exceptions.ConnectionError:
-            pyplc_logger.error(f'{self}: Can\'t download DataLog({datalog_name}).')
-            return PLCComResult.NOT_CONNECTED
-        except ValueError:
-            msg: str = f'{self}:Empty response from PLC.'
-            pyplc_logger.error(msg)
-            return PLCComResult.UNESPECIFY_ERROR
+        timeout: httpx.Timeout = httpx.Timeout(10., connect= 5.)
+        with httpx.Client(timeout= timeout) as client:
+            try:
+                response: httpx.Response = client.get(
+                    f'http://{self.ip}/DataLog.html?&FileName={datalog_name}.csv'
+                )
+                response.raise_for_status()
+                if response.content == '':
+                    raise ValueError
+                date: str = str(datetime.now(timezone.utc).date()).replace('-','')
+                with open(filePath / f'{date}-{datalog_name}.csv', 'wb') as file:
+                    file.write(response.content)
+                pyplc_logger.debug(f'{self}: Readed DataLog({datalog_name}).')
+                return PLCComResult.SUCCESS
+            except httpx.HTTPStatusError as e:
+                pyplc_logger.error(f'{self}: Can\'t download DataLog({datalog_name}). [{e.response.status_code}] {e.response.text}')
+                return PLCComResult.NOT_CONNECTED
+            except httpx.TimeoutException:
+                pyplc_logger.error(f'{self}: Can\'t download DataLog({datalog_name}). Timeout error.')
+                return PLCComResult.NOT_CONNECTED
+            except httpx.RequestError:
+                pyplc_logger.error(f'{self}: Can\'t download DataLog({datalog_name}). Connexion error.')
+                return PLCComResult.NOT_CONNECTED
+            except ValueError:
+                msg: str = f'{self}:Empty response from PLC.'
+                pyplc_logger.error(msg)
+                return PLCComResult.UNESPECIFY_ERROR

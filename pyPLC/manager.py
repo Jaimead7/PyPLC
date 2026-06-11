@@ -242,7 +242,7 @@ class PLCManager(BaseModel):
     def read_var(
         self,
         var: PLCVar | str,
-        area: Optional[PLCMemoryArea] = None
+        area: Any = None
     ) -> tuple[PLCComResult, Any]:
         if not self.is_connected():
             if not self.connect().is_error():
@@ -263,7 +263,7 @@ class PLCManager(BaseModel):
     def get_var(
         self,
         var: PLCVar | str,
-        area: Optional[PLCMemoryArea] = None
+        area: Any = None
     ) -> Any:
         for plc_area in self.memory_areas:
             if area is None or plc_area == area:
@@ -329,7 +329,7 @@ class PLCManager(BaseModel):
         self,
         var: PLCVar | str,
         value: Any,
-        area: Optional[PLCMemoryArea] = None
+        area: Any = None
     ) -> tuple[PLCComResult, Any]:
         if not self.is_connected():
             if not self.connect().is_error():
@@ -354,7 +354,7 @@ class PLCManager(BaseModel):
         self,
         var: PLCVar | str,
         value: Any,
-        area: Optional[PLCMemoryArea] = None
+        area: Any = None
     ) -> None:
         for plcArea in self.memory_areas:
             if area is None or plcArea == area:

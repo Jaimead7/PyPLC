@@ -1,5 +1,5 @@
 import re
-from collections.abc import Sequence
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -43,7 +43,7 @@ class PLCManager(BaseModel):
             raise ValueError(msg)
 
     @property
-    def memory_areas(self) -> Sequence[PLCMemoryArea]:
+    def memory_areas(self) -> Iterable[PLCMemoryArea]:
         return tuple(
             x
             for x in (self.inputs, self.outputs, self.marks, *self.dbs.values())
@@ -220,7 +220,7 @@ class PLCManager(BaseModel):
             self.disconnect()
         return result
 
-    def read_dbs(self, dbs: Optional[Sequence[int | PLCDB]] = None) -> PLCComResult:
+    def read_dbs(self, dbs: Optional[Iterable[int | PLCDB]] = None) -> PLCComResult:
         if not self.is_connected():
             if not self.connect().is_error():
                 return PLCComResult.NOT_CONNECTED
@@ -306,7 +306,7 @@ class PLCManager(BaseModel):
             self.disconnect()
         return result
 
-    def write_db(self, dbs: Optional[Sequence[int | PLCDB]] = None) -> PLCComResult:
+    def write_db(self, dbs: Optional[Iterable[int | PLCDB]] = None) -> PLCComResult:
         if not self.is_connected():
             if not self.connect().is_error():
                 return PLCComResult.NOT_CONNECTED

@@ -7,6 +7,7 @@ from typing import Any, Optional
 import httpx
 from pydantic import BaseModel, Field, field_validator
 from snap7 import Client
+from snap7.error import S7ConnectionError
 from typing_extensions import Self
 
 from .file_readers import FileReader, FileReaderReg
@@ -161,8 +162,8 @@ class PLCManager(BaseModel):
             )
             pyplc_logger.debug(f'{self}: PLC connected.', Styles.SUCCEED)
             return PLCComResult.SUCCESS
-        except RuntimeError:
-            pyplc_logger.error(f'{self}: Connection failed.')
+        except Exception as e:
+            pyplc_logger.error(f'{self}: Connection failed. {e}')
             return PLCComResult.NOT_CONNECTED
 
     def disconnect(self) -> PLCComResult:

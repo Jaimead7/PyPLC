@@ -3,6 +3,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 from snap7.client import Client
+from snap7.error import S7ConnectionError
 from typing_extensions import Self
 
 from .logs import Styles, pyplc_logger
@@ -71,6 +72,14 @@ class PLCMemoryArea(BaseModel, ABC):
             msg: str = f'{self}.{var} read error {result}. {PLCClientErrors.get_str(e)}.'
             pyplc_logger.error(msg)
             return (result, None)
+        except S7ConnectionError as e:
+            msg: str = f'{self}.{var} read error. {e}.'
+            pyplc_logger.error(msg)
+            return (PLCComResult.NOT_CONNECTED, None)
+        except Exception as e:
+            msg: str = f'{self}.{var} read error. {e}.'
+            pyplc_logger.error(msg)
+            return (PLCComResult.UNESPECIFY_ERROR, None)
 
     def write_area(self, client: Client) -> PLCComResult:
         results: list[int] = [self._write_var(var, client) for var in self.vars.values()]
@@ -142,6 +151,10 @@ class PLCInputs(PLCMemoryArea):
             buffer: bytearray = client.eb_read(0, self.size)
         except RuntimeError as e:
             return self.manage_runtime_error(e)
+        except S7ConnectionError:
+            return PLCComResult.NOT_CONNECTED
+        except Exception:
+            return PLCComResult.UNESPECIFY_ERROR
         error_vars: list[PLCVar] = []
         for var in self.vars.values():
             try:
@@ -155,10 +168,7 @@ class PLCInputs(PLCMemoryArea):
         return PLCComResult.SUCCESS
 
     def _read_var(self, var: PLCVar, client: Client) -> bytearray:
-        try:
-            return client.eb_read(var.offset.bytes_offset, var.bytes_size)
-        except RuntimeError:
-            raise
+        return client.eb_read(var.offset.bytes_offset, var.bytes_size)
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
         if var.rw not in (PLCReadWrite.READ_WRITE,):
@@ -166,16 +176,21 @@ class PLCInputs(PLCMemoryArea):
             return PLCComResult.READ_ONLY
         try:
             value: bytearray = var.get_bytes_array()
-        except ValueError as e:
-            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
-            return PLCComResult.INVALID_PARAMS
-        try:
             client.eb_write(var.offset.bytes_offset, var.bytes_size, value)
             pyplc_logger.debug(f'{self}.{var} writed.', Styles.SUCCEED)
             return PLCComResult.SUCCESS
+        except (ValueError, TypeError) as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.INVALID_PARAMS
         except RuntimeError as e:
             pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
             return self.manage_runtime_error(e)
+        except S7ConnectionError as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.NOT_CONNECTED
+        except Exception as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.UNESPECIFY_ERROR
 
 
 class PLCOutputs(PLCMemoryArea):
@@ -199,6 +214,10 @@ class PLCOutputs(PLCMemoryArea):
             buffer: bytearray = client.ab_read(0, self.size)
         except RuntimeError as e:
             return self.manage_runtime_error(e)
+        except S7ConnectionError:
+            return PLCComResult.NOT_CONNECTED
+        except Exception:
+            return PLCComResult.UNESPECIFY_ERROR
         error_vars: list[PLCVar] = []
         for var in self.vars.values():
             try:
@@ -212,10 +231,7 @@ class PLCOutputs(PLCMemoryArea):
         return PLCComResult.SUCCESS
 
     def _read_var(self, var: PLCVar, client: Client) -> bytearray:
-        try:
-            return client.ab_read(var.offset.bytes_offset, var.bytes_size)
-        except RuntimeError:
-            raise
+        return client.ab_read(var.offset.bytes_offset, var.bytes_size)
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
         if var.rw not in (PLCReadWrite.READ_WRITE,):
@@ -223,16 +239,21 @@ class PLCOutputs(PLCMemoryArea):
             return PLCComResult.READ_ONLY
         try:
             value: Optional[bytearray] = var.get_bytes_array()
-        except ValueError as e:
-            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
-            return PLCComResult.INVALID_PARAMS
-        try:
             client.ab_write(var.offset.bytes_offset, value)
             pyplc_logger.debug(f'{self}.{var} writed.', Styles.SUCCEED)
             return PLCComResult.SUCCESS
+        except (ValueError, TypeError) as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.INVALID_PARAMS
         except RuntimeError as e:
             pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
             return self.manage_runtime_error(e)
+        except S7ConnectionError as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.NOT_CONNECTED
+        except Exception as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.UNESPECIFY_ERROR
 
 
 class PLCMarks(PLCMemoryArea):
@@ -256,6 +277,10 @@ class PLCMarks(PLCMemoryArea):
             buffer: bytearray = client.mb_read(0, self.size)
         except RuntimeError as e:
             return self.manage_runtime_error(e)
+        except S7ConnectionError:
+            return PLCComResult.NOT_CONNECTED
+        except Exception:
+            return PLCComResult.UNESPECIFY_ERROR
         error_vars: list[PLCVar] = []
         for var in self.vars.values():
             try:
@@ -269,10 +294,7 @@ class PLCMarks(PLCMemoryArea):
         return PLCComResult.SUCCESS
 
     def _read_var(self, var: PLCVar, client: Client) -> bytearray:
-        try:
-            return client.mb_read(var.offset.bytes_offset, var.bytes_size)
-        except RuntimeError:
-            raise
+        return client.mb_read(var.offset.bytes_offset, var.bytes_size)
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
         if var.rw not in (PLCReadWrite.READ_WRITE,):
@@ -280,16 +302,21 @@ class PLCMarks(PLCMemoryArea):
             return PLCComResult.READ_ONLY
         try:
             value: Optional[bytearray] = var.get_bytes_array()
-        except TypeError as e:
-            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
-            return PLCComResult.INVALID_PARAMS
-        try:
             client.mb_write(var.offset.bytes_offset, var.bytes_size, value)
             pyplc_logger.debug(f'{self}.{var} writed.', Styles.SUCCEED)
             return PLCComResult.SUCCESS
+        except (ValueError, TypeError) as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.INVALID_PARAMS
         except RuntimeError as e:
             pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
             return self.manage_runtime_error(e)
+        except S7ConnectionError as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.NOT_CONNECTED
+        except Exception as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.UNESPECIFY_ERROR
 
 
 class PLCDB(PLCMemoryArea):
@@ -335,6 +362,10 @@ class PLCDB(PLCMemoryArea):
             buffer: bytearray = client.db_read(self.number, 0, self.size)
         except RuntimeError as e:
             return self.manage_runtime_error(e)
+        except S7ConnectionError:
+            return PLCComResult.NOT_CONNECTED
+        except Exception:
+            return PLCComResult.UNESPECIFY_ERROR
         error_vars: list[PLCVar] = []
         for var in self.vars.values():
             try:
@@ -348,10 +379,7 @@ class PLCDB(PLCMemoryArea):
         return PLCComResult.SUCCESS
 
     def _read_var(self, var: PLCVar, client: Client) -> bytearray:
-        try:
-            return client.db_read(self.number, var.offset.bytes_offset, var.bytes_size)
-        except RuntimeError:
-            raise
+        return client.db_read(self.number, var.offset.bytes_offset, var.bytes_size)
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
         if var.rw not in (PLCReadWrite.READ_WRITE,):
@@ -359,13 +387,18 @@ class PLCDB(PLCMemoryArea):
             return PLCComResult.READ_ONLY
         try:
             value: Optional[bytearray] = var.get_bytes_array()
-        except TypeError as e:
-            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
-            return PLCComResult.INVALID_PARAMS
-        try:
             client.db_write(self.number, var.offset.bytes_offset, value)
             pyplc_logger.debug(f'{self}.{var} writed.', Styles.SUCCEED)
             return PLCComResult.SUCCESS
+        except (TypeError, TypeError) as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.INVALID_PARAMS
         except RuntimeError as e:
             pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
             return self.manage_runtime_error(e)
+        except S7ConnectionError as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.NOT_CONNECTED
+        except Exception as e:
+            pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
+            return PLCComResult.UNESPECIFY_ERROR

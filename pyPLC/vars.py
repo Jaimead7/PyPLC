@@ -243,14 +243,11 @@ class PLCVar(BaseModel):
         return PLCReadWrite.validate(value)
 
     def get_bytes_array(self, last_value: bytearray = bytearray()) -> bytearray:
-        try:
-            result: bytearray = self.var_type.get_bytes_array(
-                value= self.value,
-                last_value= last_value,
-                pos= self.offset.bits_offset
-            )
-        except ValueError:
-            raise
+        result: bytearray = self.var_type.get_bytes_array(
+            value= self.value,
+            last_value= last_value,
+            pos= self.offset.bits_offset
+        )
         return result
 
     def set_value_from_buffer(self, buffer: bytes) -> None:

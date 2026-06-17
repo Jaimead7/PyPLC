@@ -58,15 +58,9 @@ class PLCManager(BaseModel):
         file_path: Path,
         reader: Optional[FileReader] = None
     ) -> Self:
-        try:
-            if reader is None:
-                reader = FileReaderReg.from_file(file_path)
-        except ValueError:
-            raise
-        try:
-            data: dict[str, Any] = reader(file_path)
-        except (FileNotFoundError, ImportError, RuntimeError):
-            raise
+        if reader is None:
+            reader = FileReaderReg.from_file(file_path)
+        data: dict[str, Any] = reader(file_path)
         for key, value in data.items():
             if key.upper() != 'PLC' or not isinstance(value, dict):
                 continue
@@ -178,7 +172,7 @@ class PLCManager(BaseModel):
     def is_connected(self) -> bool:
         try:
             return self._client.get_connected()
-        except AttributeError:
+        except Exception:
             return False
 
     def read_data(self) -> None:
@@ -397,6 +391,6 @@ class PLCManager(BaseModel):
                 pyplc_logger.error(f'{self}: Can\'t download DataLog({datalog_name}). Connexion error.')
                 return PLCComResult.NOT_CONNECTED
             except ValueError:
-                msg: str = f'{self}:Empty response from PLC.'
+                msg: str = f'{self}: Empty response from PLC.'
                 pyplc_logger.error(msg)
                 return PLCComResult.UNESPECIFY_ERROR

@@ -7,13 +7,12 @@ from typing import Any, Optional
 import httpx
 from pydantic import BaseModel, Field, field_validator
 from snap7 import Client
-from snap7.error import S7ConnectionError
 from typing_extensions import Self
 
 from .file_readers import FileReader, FileReaderReg
 from .logs import Styles, pyplc_logger
 from .memory_areas import PLCDB, PLCInputs, PLCMarks, PLCMemoryArea, PLCOutputs
-from .structures import PLCComResult
+from .structures import PLCComResult, PLCConnType
 from .vars import PLCVar
 
 
@@ -145,8 +144,9 @@ class PLCManager(BaseModel):
             dbs= dbs
         )
 
-    def connect(self) -> PLCComResult:
+    def connect(self, conn_type: PLCConnType = PLCConnType.OP) -> PLCComResult:
         self._client: Client = Client()
+        self._client.set_connection_type(conn_type)
         try:
             self._client.connect(
                 address= self.ip,

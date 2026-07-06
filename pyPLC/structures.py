@@ -7,6 +7,13 @@ from .logs import pyplc_logger
 
 
 @unique
+class PLCConnType(IntEnum):
+    PG = 1
+    OP = 2
+    BASIC = 3
+
+
+@unique
 class PLCComResult(IntEnum):
     NO_ACTION = 100
     SUCCESS = 200

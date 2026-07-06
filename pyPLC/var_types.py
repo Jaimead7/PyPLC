@@ -85,7 +85,7 @@ class PLCVarTypesReg:
         if var_type is not None:
             return var_type()
         try:
-            if name.startswith('ARRAY_OF_'):
+            if name.startswith('ARRAYOF'):
                 res: list[str | Any] = re.split(r'(\d+)', name)
                 new_name: str = res[0]
                 lenght: int = int(res[1])

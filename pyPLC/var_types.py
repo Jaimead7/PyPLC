@@ -660,7 +660,7 @@ class PLCCharType(PLCVarType):
         self._raise_value_error(value)
 
 
-@PLCVarTypesReg.register(name= 'ARRAY_OF_CHAR')
+@PLCVarTypesReg.register(name= 'ARRAYOFCHAR')
 class PLCArrayOfChar(PLCVarType):
     def __init__(self, lenght: int = 1, *args, **kwargs) -> None:
         self.length: int = lenght
@@ -670,7 +670,7 @@ class PLCArrayOfChar(PLCVarType):
 
     @property
     def NAME(self) -> str:
-        return 'Array_Of_Char'
+        return f'ArrayOfChar{self.length}'
 
     @property
     def BYTES(self) -> int:

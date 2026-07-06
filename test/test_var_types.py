@@ -798,9 +798,10 @@ class TestPLCArrayOfCharType:
     @mark.parametrize(
         'name, length',
         [
-            ('array_of_char20', 20),
-            ('ArraY_Of_CHaR5', 5),
-            ('ARRAY_OF_CHAR100', 100),
+            ('ArrayOfChar15', 15),
+            ('arrayofchar20', 20),
+            ('ArraYOfCHaR5', 5),
+            ('ARRAYOFCHAR100', 100),
         ]
     )
     def test_factory(self, name: str, length: int) -> None:

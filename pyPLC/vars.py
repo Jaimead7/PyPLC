@@ -144,19 +144,20 @@ class PLCMemoryOffset():
 class PLCVar(BaseModel):
     name: str
     offset: PLCMemoryOffset
-    var_type: type[PLCVarType]
+    var_type: PLCVarType
     rw: PLCReadWrite = PLCReadWrite.READ
     value: Any = None
 
     model_config = ConfigDict(
-        validate_assignment= True
+        validate_assignment= True,
+        arbitrary_types_allowed= True
     )
 
     def __str__(self) -> str:
         return f'{self.name}'
 
     def __repr__(self) -> str:
-        return f'{self.name}[type: {self.var_type.__name__}, offset: {self.offset}, rw: {self.rw}, value: {self.value}]'
+        return f'{self.name}[type: {self.var_type.__class__.__name__}, offset: {self.offset}, rw: {self.rw}, value: {self.value}]'
 
     def __eq__(self, value: object) -> bool:
         if isinstance(value, self.__class__):
@@ -181,7 +182,7 @@ class PLCVar(BaseModel):
     def from_dict(cls, data: dict[str, Any]) -> Self:
         name: Optional[str] = None
         offset: Optional[PLCMemoryOffset] = None
-        var_type: Optional[type[PLCVarType]] = None
+        var_type: Optional[PLCVarType] = None
         rw: Optional[PLCReadWrite] = None
         for key, value in data.items():
             match key.upper():
@@ -204,27 +205,28 @@ class PLCVar(BaseModel):
             rw= rw  # type: ignore
         )
 
-    @field_serializer('var_type')
-    def serialize_var_type(self, var_type: type[PLCVarType]) -> str:
-        return var_type.__name__
-
     @field_validator('var_type', mode= 'before')
-    def validate_var_type(cls, value: Any) -> type[PLCVarType]:
+    @classmethod
+    def validate_var_type(cls, value: Any) -> PLCVarType:
         try:
-            if issubclass(value, PLCVarType):
+            if isinstance(value, PLCVarType):
                 return value
-        except TypeError:
+        except Exception:
             pass
         try:
-            return PLCVarTypesReg.get(str(value))
+            ret: Optional[PLCVarType] = PLCVarTypesReg.get(str(value))
+            if ret is None:
+                raise ValueError
+            return ret
         except ValueError:
             msg: str = f'Invalid type for {cls.__name__}.var_type: {value}'
             pyplc_logger.error(msg)
             raise ValueError(msg)
 
     @field_validator('value')
+    @classmethod
     def validate_value(cls, value: Any, info: ValidationInfo) -> Any:
-        var_type: Optional[type[PLCVarType]] = info.data.get('var_type')
+        var_type: Optional[PLCVarType] = info.data.get('var_type')
         offset: Optional[PLCMemoryOffset] = info.data.get('offset')
         if value is None or var_type is None or offset is None:
             return None
@@ -239,6 +241,7 @@ class PLCVar(BaseModel):
             raise ValueError(msg)
 
     @field_validator('rw', mode= 'before')
+    @classmethod
     def validate_rw(cls, value: Any) -> PLCReadWrite:
         return PLCReadWrite.validate(value)
 

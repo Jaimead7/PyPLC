@@ -1,8 +1,7 @@
-from struct import error as StructError
-
 from pytest import mark, raises
 
 from pyPLC.var_types import *
+from pyPLC.var_types import PLCVarType
 
 
 class TestPLCVarTypesReg:
@@ -20,7 +19,7 @@ class TestPLCBoolType:
         ]
     )
     def test_factory(self, name: str) -> None:
-        assert PLCVarTypesReg.get(name) == PLCBoolType
+        assert isinstance(PLCVarTypesReg.get(name), PLCBoolType)
 
     @mark.parametrize(
         'byte, pos, expected',
@@ -41,7 +40,7 @@ class TestPLCBoolType:
         ]
     )
     def test_validate_value(self, byte: Any, pos: int, expected: bool) -> None:
-        assert PLCBoolType.validate_value(byte, pos) == expected
+        assert PLCBoolType().validate_value(byte, pos) == expected
 
     @mark.parametrize('byte, pos, error', [])
     def test_validate_value_errors(
@@ -51,7 +50,7 @@ class TestPLCBoolType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCBoolType.validate_value(byte, pos)
+            PLCBoolType().validate_value(byte, pos)
 
     @mark.parametrize(
         'new_value, last_value, pos, expected',
@@ -72,7 +71,7 @@ class TestPLCBoolType:
         pos: int,
         expected: bytearray
     ) -> None:
-        assert PLCBoolType.get_bytes_array(new_value, last_value, pos) == expected
+        assert PLCBoolType().get_bytes_array(new_value, last_value, pos) == expected
 
     @mark.parametrize(
         'new_value, last_value, pos, error',
@@ -88,7 +87,7 @@ class TestPLCBoolType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCBoolType.get_bytes_array(new_value, last_value, pos)
+            PLCBoolType().get_bytes_array(new_value, last_value, pos)
 
 
 class TestPLCByteType:
@@ -101,7 +100,7 @@ class TestPLCByteType:
         ]
     )
     def test_factory(self, name: str) -> None:
-        assert PLCVarTypesReg.get(name) == PLCByteType
+        assert isinstance(PLCVarTypesReg.get(name), PLCByteType)
 
     @mark.parametrize(
         'byte, expected',
@@ -117,7 +116,7 @@ class TestPLCByteType:
         ]
     )
     def test_validate_value(self, byte: Any, expected: bool) -> None:
-        assert PLCByteType.validate_value(byte) == expected
+        assert PLCByteType().validate_value(byte) == expected
 
     @mark.parametrize(
         'byte, error',
@@ -129,7 +128,7 @@ class TestPLCByteType:
     )
     def test_validate_value_errors(self, byte: Any, error: type[BaseException]) -> None:
         with raises(error):
-            PLCByteType.validate_value(byte)
+            PLCByteType().validate_value(byte)
 
     @mark.parametrize(
         'new_value, expected',
@@ -141,7 +140,7 @@ class TestPLCByteType:
         ]
     )
     def test_get_bytes_array(self, new_value: Any, expected: bytearray) -> None:
-        assert PLCByteType.get_bytes_array(new_value) == expected
+        assert PLCByteType().get_bytes_array(new_value) == expected
 
     @mark.parametrize(
         'new_value, error',
@@ -156,7 +155,7 @@ class TestPLCByteType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCByteType.get_bytes_array(new_value)
+            PLCByteType().get_bytes_array(new_value)
 
 
 class TestPLCWordType:
@@ -169,7 +168,7 @@ class TestPLCWordType:
         ]
     )
     def test_factory(self, name: str) -> None:
-        assert PLCVarTypesReg.get(name) == PLCWordType
+        assert isinstance(PLCVarTypesReg.get(name), PLCWordType)
 
     @mark.parametrize(
         'byte, expected',
@@ -185,7 +184,7 @@ class TestPLCWordType:
         ]
     )
     def test_validate_value(self, byte: Any, expected: bool) -> None:
-        assert PLCWordType.validate_value(byte) == expected
+        assert PLCWordType().validate_value(byte) == expected
 
     @mark.parametrize(
         'byte, error',
@@ -198,7 +197,7 @@ class TestPLCWordType:
     )
     def test_validate_value_errors(self, byte: Any, error: type[BaseException]) -> None:
         with raises(error):
-            PLCWordType.validate_value(byte)
+            PLCWordType().validate_value(byte)
 
     @mark.parametrize(
         'new_value, expected',
@@ -210,7 +209,7 @@ class TestPLCWordType:
         ]
     )
     def test_get_bytes_array(self, new_value: Any, expected: bytearray) -> None:
-        assert PLCWordType.get_bytes_array(new_value) == expected
+        assert PLCWordType().get_bytes_array(new_value) == expected
 
     @mark.parametrize(
         'new_value, error',
@@ -225,7 +224,7 @@ class TestPLCWordType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCWordType.get_bytes_array(new_value)
+            PLCWordType().get_bytes_array(new_value)
 
 
 class TestPLCDWordType:
@@ -238,7 +237,7 @@ class TestPLCDWordType:
         ]
     )
     def test_factory(self, name: str) -> None:
-        assert PLCVarTypesReg.get(name) == PLCDWordType
+        assert isinstance(PLCVarTypesReg.get(name), PLCDWordType)
 
     @mark.parametrize(
         'byte, expected',
@@ -254,7 +253,7 @@ class TestPLCDWordType:
         ]
     )
     def test_validate_value(self, byte: Any, expected: bool) -> None:
-        assert PLCDWordType.validate_value(byte) == expected
+        assert PLCDWordType().validate_value(byte) == expected
 
     @mark.parametrize(
         'byte, error',
@@ -267,7 +266,7 @@ class TestPLCDWordType:
     )
     def test_validate_value_errors(self, byte: Any, error: type[BaseException]) -> None:
         with raises(error):
-            PLCDWordType.validate_value(byte)
+            PLCDWordType().validate_value(byte)
 
     @mark.parametrize(
         'new_value, expected',
@@ -279,7 +278,7 @@ class TestPLCDWordType:
         ]
     )
     def test_get_bytes_array(self, new_value: Any, expected: bytearray) -> None:
-        assert PLCDWordType.get_bytes_array(new_value) == expected
+        assert PLCDWordType().get_bytes_array(new_value) == expected
 
     @mark.parametrize(
         'new_value, error',
@@ -294,7 +293,7 @@ class TestPLCDWordType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCDWordType.get_bytes_array(new_value)
+            PLCDWordType().get_bytes_array(new_value)
 
 
 class TestPLCIntType:
@@ -307,7 +306,7 @@ class TestPLCIntType:
         ]
     )
     def test_factory(self, name: str) -> None:
-        assert PLCVarTypesReg.get(name) == PLCIntType
+        assert isinstance(PLCVarTypesReg.get(name), PLCIntType)
 
     @mark.parametrize(
         'byte, expected',
@@ -323,7 +322,7 @@ class TestPLCIntType:
         ]
     )
     def test_validate_value(self, byte: Any, expected: bool) -> None:
-        assert PLCIntType.validate_value(byte) == expected
+        assert PLCIntType().validate_value(byte) == expected
 
     @mark.parametrize(
         'byte, error',
@@ -340,7 +339,7 @@ class TestPLCIntType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCIntType.validate_value(byte)
+            PLCIntType().validate_value(byte)
 
     @mark.parametrize(
         'new_value, expected',
@@ -352,7 +351,7 @@ class TestPLCIntType:
         ]
     )
     def test_get_bytes_array(self, new_value: Any, expected: bytearray) -> None:
-        assert PLCIntType.get_bytes_array(new_value) == expected
+        assert PLCIntType().get_bytes_array(new_value) == expected
 
     @mark.parametrize(
         'new_value, error',
@@ -367,7 +366,7 @@ class TestPLCIntType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCIntType.get_bytes_array(new_value)
+            PLCIntType().get_bytes_array(new_value)
 
 
 class TestPLCUIntType:
@@ -380,7 +379,7 @@ class TestPLCUIntType:
         ]
     )
     def test_factory(self, name: str) -> None:
-        assert PLCVarTypesReg.get(name) == PLCUIntType
+        assert isinstance(PLCVarTypesReg.get(name), PLCUIntType)
 
     @mark.parametrize(
         'byte, expected',
@@ -392,7 +391,7 @@ class TestPLCUIntType:
         ]
     )
     def test_validate_value(self, byte: Any, expected: bool) -> None:
-        assert PLCUIntType.validate_value(byte) == expected
+        assert PLCUIntType().validate_value(byte) == expected
 
     @mark.parametrize(
         'byte, error',
@@ -409,7 +408,7 @@ class TestPLCUIntType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCUIntType.validate_value(byte)
+            PLCUIntType().validate_value(byte)
 
     @mark.parametrize(
         'new_value, expected',
@@ -419,7 +418,7 @@ class TestPLCUIntType:
         ]
     )
     def test_get_bytes_array(self, new_value: Any, expected: bytearray) -> None:
-        assert PLCUIntType.get_bytes_array(new_value) == expected
+        assert PLCUIntType().get_bytes_array(new_value) == expected
 
     @mark.parametrize(
         'new_value, error',
@@ -434,7 +433,7 @@ class TestPLCUIntType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCUIntType.get_bytes_array(new_value)
+            PLCUIntType().get_bytes_array(new_value)
 
 
 class TestPLCSIntType:
@@ -447,7 +446,7 @@ class TestPLCSIntType:
         ]
     )
     def test_factory(self, name: str) -> None:
-        assert PLCVarTypesReg.get(name) == PLCSIntType
+        assert isinstance(PLCVarTypesReg.get(name), PLCSIntType)
 
     @mark.parametrize(
         'byte, expected',
@@ -463,7 +462,7 @@ class TestPLCSIntType:
         ]
     )
     def test_validate_value(self, byte: Any, expected: bool) -> None:
-        assert PLCSIntType.validate_value(byte) == expected
+        assert PLCSIntType().validate_value(byte) == expected
 
     @mark.parametrize(
         'byte, error',
@@ -475,7 +474,7 @@ class TestPLCSIntType:
     )
     def test_validate_value_errors(self, byte: Any, error: type[BaseException]) -> None:
         with raises(error):
-            PLCSIntType.validate_value(byte)
+            PLCSIntType().validate_value(byte)
 
     @mark.parametrize(
         'new_value, expected',
@@ -487,7 +486,7 @@ class TestPLCSIntType:
         ]
     )
     def test_get_bytes_array(self, new_value: Any, expected: bytearray) -> None:
-        assert PLCSIntType.get_bytes_array(new_value) == expected
+        assert PLCSIntType().get_bytes_array(new_value) == expected
 
     @mark.parametrize(
         'new_value, error',
@@ -502,7 +501,7 @@ class TestPLCSIntType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCSIntType.get_bytes_array(new_value)
+            PLCSIntType().get_bytes_array(new_value)
 
 
 class TestPLCUSIntType:
@@ -515,7 +514,7 @@ class TestPLCUSIntType:
         ]
     )
     def test_factory(self, name: str) -> None:
-        assert PLCVarTypesReg.get(name) == PLCUSIntType
+        assert isinstance(PLCVarTypesReg.get(name), PLCUSIntType)
 
     @mark.parametrize(
         'byte, expected',
@@ -527,7 +526,7 @@ class TestPLCUSIntType:
         ]
     )
     def test_validate_value(self, byte: Any, expected: bool) -> None:
-        assert PLCUSIntType.validate_value(byte) == expected
+        assert PLCUSIntType().validate_value(byte) == expected
 
     @mark.parametrize(
         'byte, error',
@@ -543,7 +542,7 @@ class TestPLCUSIntType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCUSIntType.validate_value(byte)
+            PLCUSIntType().validate_value(byte)
 
     @mark.parametrize(
         'new_value, expected',
@@ -553,7 +552,7 @@ class TestPLCUSIntType:
         ]
     )
     def test_get_bytes_array(self, new_value: Any, expected: bytearray) -> None:
-        assert PLCUSIntType.get_bytes_array(new_value) == expected
+        assert PLCUSIntType().get_bytes_array(new_value) == expected
 
     @mark.parametrize(
         'new_value, error',
@@ -568,7 +567,7 @@ class TestPLCUSIntType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCUSIntType.get_bytes_array(new_value)
+            PLCUSIntType().get_bytes_array(new_value)
 
 
 class TestPLCDIntType:
@@ -581,7 +580,7 @@ class TestPLCDIntType:
         ]
     )
     def test_factory(self, name: str) -> None:
-        assert PLCVarTypesReg.get(name) == PLCDIntType
+        assert isinstance(PLCVarTypesReg.get(name), PLCDIntType)
 
     @mark.parametrize(
         'byte, expected',
@@ -597,7 +596,7 @@ class TestPLCDIntType:
         ]
     )
     def test_validate_value(self, byte: Any, expected: bool) -> None:
-        assert PLCDIntType.validate_value(byte) == expected
+        assert PLCDIntType().validate_value(byte) == expected
 
     @mark.parametrize(
         'byte, error',
@@ -614,7 +613,7 @@ class TestPLCDIntType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCDIntType.validate_value(byte)
+            PLCDIntType().validate_value(byte)
 
     @mark.parametrize(
         'new_value, expected',
@@ -626,7 +625,7 @@ class TestPLCDIntType:
         ]
     )
     def test_get_bytes_array(self, new_value: Any, expected: bytearray) -> None:
-        assert PLCDIntType.get_bytes_array(new_value) == expected
+        assert PLCDIntType().get_bytes_array(new_value) == expected
 
     @mark.parametrize(
         'new_value, error',
@@ -637,7 +636,7 @@ class TestPLCDIntType:
     )
     def test_get_bytes_array_errors(self, new_value: Any, error: type[BaseException]) -> None:
         with raises(error):
-            PLCDIntType.get_bytes_array(new_value)
+            PLCDIntType().get_bytes_array(new_value)
 
 
 class TestPLCUDIntType:
@@ -650,7 +649,7 @@ class TestPLCUDIntType:
         ]
     )
     def test_factory(self, name: str) -> None:
-        assert PLCVarTypesReg.get(name) == PLCUDIntType
+        assert isinstance(PLCVarTypesReg.get(name), PLCUDIntType)
 
     @mark.parametrize(
         'byte, expected',
@@ -662,7 +661,7 @@ class TestPLCUDIntType:
         ]
     )
     def test_validate_value(self, byte: Any, expected: bool) -> None:
-        assert PLCUDIntType.validate_value(byte) == expected
+        assert PLCUDIntType().validate_value(byte) == expected
 
     @mark.parametrize(
         'byte, error', [
@@ -678,7 +677,7 @@ class TestPLCUDIntType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCUDIntType.validate_value(byte)
+            PLCUDIntType().validate_value(byte)
 
     @mark.parametrize(
         'new_value, expected',
@@ -688,7 +687,7 @@ class TestPLCUDIntType:
         ]
     )
     def test_get_bytes_array(self, new_value: Any, expected: bytearray) -> None:
-        assert PLCUDIntType.get_bytes_array(new_value) == expected
+        assert PLCUDIntType().get_bytes_array(new_value) == expected
 
     @mark.parametrize(
         'new_value, error', [
@@ -702,7 +701,7 @@ class TestPLCUDIntType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCUDIntType.get_bytes_array(new_value)
+            PLCUDIntType().get_bytes_array(new_value)
 
 
 class TestPLCRealType:
@@ -715,7 +714,7 @@ class TestPLCRealType:
         ]
     )
     def test_factory(self, name: str) -> None:
-        assert PLCVarTypesReg.get(name) == PLCRealType
+        assert isinstance(PLCVarTypesReg.get(name), PLCRealType)
 
     @mark.parametrize(
         'byte, expected',
@@ -731,7 +730,7 @@ class TestPLCRealType:
         ]
     )
     def test_validate_value(self, byte: Any, expected: bool) -> None:
-        assert PLCRealType.validate_value(byte) == expected
+        assert PLCRealType().validate_value(byte) == expected
 
     @mark.parametrize(
         'byte, error',
@@ -746,7 +745,7 @@ class TestPLCRealType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCRealType.validate_value(byte)
+            PLCRealType().validate_value(byte)
 
     @mark.parametrize(
         'new_value, expected',
@@ -757,7 +756,7 @@ class TestPLCRealType:
         ]
     )
     def test_get_bytes_array(self, new_value: Any, expected: bytearray) -> None:
-        assert PLCRealType.get_bytes_array(new_value) == expected
+        assert PLCRealType().get_bytes_array(new_value) == expected
 
     @mark.parametrize(
         'new_value, error',
@@ -772,7 +771,7 @@ class TestPLCRealType:
         error: type[BaseException]
     ) -> None:
         with raises(error):
-            PLCRealType.get_bytes_array(new_value)
+            PLCRealType().get_bytes_array(new_value)
 
 
 class TestPLCLRealType:
@@ -793,6 +792,119 @@ class TestPLCDTLType:
 
 class TestPLCCharType:
     ...  #TODO
+
+
+class TestPLCArrayOfCharType:
+    @mark.parametrize(
+        'name, length',
+        [
+            ('array_of_char20', 20),
+            ('ArraY_Of_CHaR5', 5),
+            ('ARRAY_OF_CHAR100', 100),
+        ]
+    )
+    def test_factory(self, name: str, length: int) -> None:
+        obj: PLCVarType | None = PLCVarTypesReg.get(name)
+        assert isinstance(obj, PLCArrayOfChar)
+        assert getattr(obj, 'length', False) == length
+
+    @mark.parametrize(
+        'byte, length, expected',
+        [
+            ('Hola', 10, 'Hola'),
+            ('Hello World', 5, 'Hello'),
+            (bytearray(b'Hola\x20\x20\x20\x20\x20\x20'), 10, 'Hola'),
+            (bytearray(b'Hello World'), 5, 'Hello'),
+            (bytearray(b'Hello World\x20'), 20, 'Hello World'),
+            (bytearray(b'\x20\x20\x20\x20\x20'), 5, ''),
+            (bytearray(b'\xc2\xa1Hola!\x20\x20\x20\x20'), 10, '¡Hola!'),
+            (bytearray(b'\xf0\x9f\x98\x8a\x20'), 5, '😊'),
+            ('a' * 100, 10, 'aaaaaaaaaa'),
+        ]
+    )
+    def test_validate_value(self, byte: Any, length: int, expected: bool) -> None:
+        assert PLCArrayOfChar(length).validate_value(byte) == expected
+
+    @mark.parametrize(
+        'byte, length, error',
+    [
+        (123, 5, ValueError),
+        (-2.5, 4, ValueError),
+        (b'ABC', 5, ValueError),
+        (object(), 5, ValueError),
+        (None, 5, ValueError),
+        ([1, 2, 3], 5, ValueError),
+    ]
+    )
+    def test_validate_value_errors(
+        self,
+        byte: Any,
+        length: int,
+        error: type[BaseException]
+    ) -> None:
+        with raises(error):
+            PLCArrayOfChar(length).validate_value(byte)
+
+    @mark.parametrize(
+        'new_value, length, expected',
+    [
+        ('Hola', 10, bytearray(b'Hola\x20\x20\x20\x20\x20\x20')),
+        ('Hello', 5, bytearray(b'Hello')),
+        ('Hello', 3, bytearray(b'Hel')),
+        ('', 5, bytearray(b'\x20\x20\x20\x20\x20')),
+        ('A', 1, bytearray(b'A')),
+        ('A', 3, bytearray(b'A\x20\x20')),
+        ('ABC', 3, bytearray(b'ABC')),
+        ('Hola', 4, bytearray(b'Hola')),
+        ('ABC', 5, bytearray(b'ABC\x20\x20')),
+        ('Test', 6, bytearray(b'Test\x20\x20')),
+        ('Hola', 8, bytearray(b'Hola\x20\x20\x20\x20')),
+        (123, 5, bytearray(b'123\x20\x20')),
+        (-456, 6, bytearray(b'-456\x20\x20')),
+        (3.14, 5, bytearray(b'3.14\x20')),
+        (-2.5, 4, bytearray(b'-2.5')),
+        (0, 3, bytearray(b'0\x20\x20')),
+        (12345, 3, bytearray(b'123')),
+        (3.14159, 5, bytearray(b'3.141')),
+        (-123.456, 5, bytearray(b'-123.')),
+        ('ñ', 3, bytearray(b'\xc3\xb1\x20')),
+        ('ñandú', 8, bytearray(b'\xc3\xb1and\xc3\xba\x20')),
+        ('¡Hola!', 10, bytearray(b'\xc2\xa1Hola!\x20\x20\x20')),
+        ('€', 4, bytearray(b'\xe2\x82\xac\x20')),
+        ('😊', 5, bytearray(b'\xf0\x9f\x98\x8a\x20')),
+        ('a' * 100, 10, bytearray(b'aaaaaaaaaa')),
+        ('abcdefghijklmnopqrstuvwxyz', 5, bytearray(b'abcde')),
+        (' ', 3, bytearray(b'\x20\x20\x20')),
+        ('\x01\x02\x03', 5, bytearray(b'\x01\x02\x03\x20\x20')),
+        ('', 0, bytearray(b'')),
+        ('ABC', 0, bytearray(b'')),
+        ('', 1, bytearray(b'\x20')),
+        ('Añejo', 8, bytearray(b'A\xc3\xb1ejo\x20\x20')),
+        ('€100', 6, bytearray(b'\xe2\x82\xac100')),
+        ('€1000', 6, bytearray(b'\xe2\x82\xac100')),
+    ]
+    )
+    def test_get_bytes_array(
+        self,
+        new_value: Any,
+        length: int,
+        expected: bytearray
+    ) -> None:
+        assert PLCArrayOfChar(length).get_bytes_array(new_value) == expected
+
+    @mark.parametrize(
+        'new_value, length, error',
+        [
+        ]
+    )
+    def test_get_bytes_array_errors(
+        self,
+        new_value: Any,
+        length: int,
+        error: type[BaseException]
+    ) -> None:
+        with raises(error):
+            PLCArrayOfChar(length).get_bytes_array(new_value)
 
 
 class TestPLCStringType:

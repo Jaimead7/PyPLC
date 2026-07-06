@@ -1,3 +1,4 @@
+import re
 from collections.abc import Callable
 from datetime import date, time, timedelta
 from struct import error as StructError
@@ -10,36 +11,42 @@ from .logs import pyplc_logger
 
 
 class PLCVarType:
-    NAME: ClassVar[str] = ''
-    BYTES: ClassVar[int] = 0
-    BITS: ClassVar[int] = 0
-
-    def __new__(cls) -> Self:
-        msg: str = f'"{cls.__name__}" is not instantiable.'
-        pyplc_logger.critical(msg)
-        raise RuntimeError(msg)
-
+    def __init__(self, *args, **kwargs) -> None:
+        pass
+    
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({self.NAME}, {self.BYTES}, {self.BITS})'
 
     def __str__(self) -> str:
         return self.NAME
 
-    @classmethod
-    def _raise_value_error(cls, value: Any) -> NoReturn:
-        msg: str = f'{value} is not type {cls.NAME}.'
+    def __eq__(self, value: object) -> bool:
+        return type(self) == type(value)
+
+    @property
+    def NAME(self) -> str:
+        return ''
+
+    @property
+    def BYTES(self) -> int:
+        return 0
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def _raise_value_error(self, value: Any) -> NoReturn:
+        msg: str = f'{value} is not type {self.NAME}.'
         pyplc_logger.error(msg)
         raise ValueError(msg)
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
-        msg: str = f'{cls.__name__} has no validate_value method.'
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
+        msg: str = f'{self.__class__.__name__} has no validate_value method.'
         pyplc_logger.critical(msg)
         raise NotImplementedError(msg)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
-        msg: str = f'{cls.__name__} has no get_bytes_array method.'
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
+        msg: str = f'{self.__class__.__name__} has no get_bytes_array method.'
         pyplc_logger.critical(msg)
         raise NotImplementedError(msg)
 
@@ -72,14 +79,24 @@ class PLCVarTypesReg:
         cls._plc_var_types.pop(name, None)
 
     @classmethod
-    def get(cls, name: str) -> type[PLCVarType]:
+    def get(cls, name: str, *args, **kwargs) -> PLCVarType | None:
         name = cls._parse_name(name)
         var_type: type[PLCVarType] | None = cls._plc_var_types.get(name, None)
-        if var_type is None:
-            msg: str = f'"{name}" is not a valid PLCVarType.'
-            pyplc_logger.error(msg)
-            raise ValueError(msg)
-        return var_type
+        if var_type is not None:
+            return var_type()
+        try:
+            if name.startswith('ARRAY_OF_'):
+                res: list[str | Any] = re.split(r'(\d+)', name)
+                new_name: str = res[0]
+                lenght: int = int(res[1])
+                var_type = cls._plc_var_types.get(new_name, None)
+                if var_type is not None:
+                    return var_type(lenght)
+        except Exception:
+            pass
+        msg: str = f'"{name}" is not a valid PLCVarType.'
+        pyplc_logger.error(msg)
+        return None
 
     @classmethod
     def list(cls) -> list[str]:
@@ -92,23 +109,29 @@ class PLCVarTypesReg:
 
 @PLCVarTypesReg.register(name= 'BOOL')
 class PLCBoolType(PLCVarType):
-    NAME: ClassVar[str] = 'Bool'
-    BYTES: ClassVar[int] = 0
-    BITS: ClassVar[int] = 1
+    @property
+    def NAME(self) -> str:
+        return 'Bool'
 
-    @classmethod
-    def validate_value(cls, value: Any, pos: int = 0, *args, **kwargs) -> bool:
+    @property
+    def BYTES(self) -> int:
+        return 0
+
+    @property
+    def BITS(self) -> int:
+        return 1
+
+    def validate_value(self, value: Any, pos: int = 0, *args, **kwargs) -> bool:
         try:
             if isinstance(value, bytearray):
                 return int.from_bytes(value, 'big') & 2 ** pos != 0
             return bool(value)
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
     def get_bytes_array(
-        cls,
+        self,
         value: Any,
         last_value: bytearray = bytearray([0]),
         pos: int = 0,
@@ -124,148 +147,178 @@ class PLCBoolType(PLCVarType):
                 return bytearray(pack('>B', mask & int.from_bytes(last_value, 'big')))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'BYTE')
 class PLCByteType(PLCVarType):
-    NAME: ClassVar[str] = 'Byte'
-    BYTES: ClassVar[int] = 1
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'Byte'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 1
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>b', value)[0]
             value = int(value)
-            if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
+            if value not in range(-((2**(8*self.BYTES))//2), (2**(8*self.BYTES))//2):
                 raise ValueError
             return value
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             value = int(value)
             return bytearray(pack('>b', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'WORD')
 class PLCWordType(PLCVarType):
-    NAME: ClassVar[str] = 'Word'
-    BYTES: ClassVar[int] = 2
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'Word'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 2
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>h', value)[0]
             value = int(value)
-            if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
+            if value not in range(-((2**(8*self.BYTES))//2), (2**(8*self.BYTES))//2):
                 raise ValueError
             return value
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             value = int(value)
             return bytearray(pack('>h', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'DWORD')
 class PLCDWordType(PLCVarType):
-    NAME: ClassVar[str] = 'DWord'
-    BYTES: ClassVar[int] = 4
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'DWord'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 4
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>l', value)[0]
             value = int(value)
-            if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
+            if value not in range(-((2**(8*self.BYTES))//2), (2**(8*self.BYTES))//2):
                 raise ValueError
             return value
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             value = int(value)
             return bytearray(pack('>l', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'INT')
 class PLCIntType(PLCVarType):
-    NAME: ClassVar[str] = 'Int'
-    BYTES: ClassVar[int] = 2
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'Int'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 2
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>h', value)[0]
             value = int(value)
-            if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
+            if value not in range(-((2**(8*self.BYTES))//2), (2**(8*self.BYTES))//2):
                 raise ValueError
             return value
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             value = int(value)
             return bytearray(pack('>h', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'UINT')
 class PLCUIntType(PLCVarType):
-    NAME: ClassVar[str] = 'UInt'
-    BYTES: ClassVar[int] = 2
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'UInt'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 2
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>H', value)[0]
             value = int(value)
             if value < 0:
                 raise ValueError
-            if value not in range(0, (2**(8*cls.BYTES))):
+            if value not in range(0, (2**(8*self.BYTES))):
                 raise ValueError
             return value
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             value = int(value)
             if value < 0:
@@ -273,61 +326,73 @@ class PLCUIntType(PLCVarType):
             return bytearray(pack('>H', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'SINT')
 class PLCSIntType(PLCVarType):
-    NAME: ClassVar[str] = 'SInt'
-    BYTES: ClassVar[int] = 1
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'SInt'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 1
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>b', value)[0]
             value = int(value)
-            if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
+            if value not in range(-((2**(8*self.BYTES))//2), (2**(8*self.BYTES))//2):
                 raise ValueError
             return value
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             value = int(value)
             return bytearray(pack('>b', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'USINT')
 class PLCUSIntType(PLCVarType):
-    NAME: ClassVar[str] = 'USInt'
-    BYTES: ClassVar[int] = 1
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'USInt'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 1
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>B', value)[0]
             value = int(value)
             if value < 0:
                 raise ValueError
-            if value not in range(0, (2**(8*cls.BYTES))):
+            if value not in range(0, (2**(8*self.BYTES))):
                 raise ValueError
             return value
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             value = int(value)
             if value < 0:
@@ -335,61 +400,73 @@ class PLCUSIntType(PLCVarType):
             return bytearray(pack('>B', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'DINT')
 class PLCDIntType(PLCVarType):
-    NAME: ClassVar[str] = 'DInt'
-    BYTES: ClassVar[int] = 4
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'DInt'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 4
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>l', value)[0]
             value = int(value)
-            if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
+            if value not in range(-((2**(8*self.BYTES))//2), (2**(8*self.BYTES))//2):
                 raise ValueError
             return value
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             value = int(value)
             return bytearray(pack('>l', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'UDINT')
 class PLCUDIntType(PLCVarType):
-    NAME: ClassVar[str] = 'UDInt'
-    BYTES: ClassVar[int] = 4
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'UDInt'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 4
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>L', value)[0]
             value = int(value)
             if value < 0:
                 raise ValueError
-            if value not in range(0, (2**(8*cls.BYTES))):
+            if value not in range(0, (2**(8*self.BYTES))):
                 raise ValueError
             return value
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             value = int(value)
             if value < 0:
@@ -397,82 +474,100 @@ class PLCUDIntType(PLCVarType):
             return bytearray(pack('>L', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'REAL')
 class PLCRealType(PLCVarType):
-    NAME: ClassVar[str] = 'Real'
-    BYTES: ClassVar[int] = 4
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'Real'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 4
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>f', value)[0]
             return float(value)
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             value = float(value)
             return bytearray(pack('>f', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'LREAL')
 class PLCLRealType(PLCVarType):
-    NAME: ClassVar[str] = 'LReal'
-    BYTES: ClassVar[int] = 8
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'LReal'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 8
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>d', value)[0]
             return float(value)
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             value = float(value)
             return bytearray(pack('>d', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'TIME')
 class PLCTimeType(PLCVarType):
-    NAME: ClassVar[str] = 'Time'
-    BYTES: ClassVar[int] = 4
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'Time'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 4
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>l', value)[0]
             value = int(value)
-            if value not in range(-((2**(8*cls.BYTES))//2), (2**(8*cls.BYTES))//2):
+            if value not in range(-((2**(8*self.BYTES))//2), (2**(8*self.BYTES))//2):
                 raise ValueError
             return time(second= value/1000)
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             if isinstance(value, time):
                 value = value.hour * 360000
@@ -483,32 +578,38 @@ class PLCTimeType(PLCVarType):
             return bytearray(pack('>l', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'DATE')
 class PLCDateType(PLCVarType):
-    NAME: ClassVar[str] = 'Date'
-    BYTES: ClassVar[int] = 2
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'Date'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 2
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return unpack('>H', value)[0]
             value = int(value)
             if value < 0:
                 raise ValueError
-            if value not in range(0, (2**(8*cls.BYTES))):
+            if value not in range(0, (2**(8*self.BYTES))):
                 raise ValueError
             return date(year= 1990, month= 1, day= 1) + timedelta(days= value)
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
             if isinstance(value, date):
                 value = (value - date(year= 1990, month= 1, day= 1)).days
@@ -518,7 +619,7 @@ class PLCDateType(PLCVarType):
             return bytearray(pack('>H', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'DTL')
@@ -528,30 +629,77 @@ class PLCDTLType(PLCVarType):
 
 @PLCVarTypesReg.register(name= 'CHAR')
 class PLCCharType(PLCVarType):
-    NAME: ClassVar[str] = 'Char'
-    BYTES: ClassVar[int] = 1
-    BITS: ClassVar[int] = 0
+    @property
+    def NAME(self) -> str:
+        return 'Char'
 
-    @classmethod
-    def validate_value(cls, value: Any, *args, **kwargs) -> Any:
+    @property
+    def BYTES(self) -> int:
+        return 1
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
                 return chr(unpack('>b', value)[0])
             if isinstance(value, str):
                 return value[0]
-            return chr(int(value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
 
-    @classmethod
-    def get_bytes_array(cls, value: Any, *args, **kwargs) -> bytearray:
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
         try:
-            value = int(value)
+            value = str(value)
             return bytearray(pack('>b', value))
         except (ValueError, TypeError, StructError, OverflowError):
             pass
-        cls._raise_value_error(value)
+        self._raise_value_error(value)
+
+
+@PLCVarTypesReg.register(name= 'ARRAY_OF_CHAR')
+class PLCArrayOfChar(PLCVarType):
+    def __init__(self, lenght: int = 1, *args, **kwargs) -> None:
+        self.length: int = lenght
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}({self.NAME}, {self.BYTES}, {self.BITS}, {self.length})'
+
+    @property
+    def NAME(self) -> str:
+        return 'Array_Of_Char'
+
+    @property
+    def BYTES(self) -> int:
+        return 1 * self.length
+
+    @property
+    def BITS(self) -> int:
+        return 0
+
+    def validate_value(self, value: Any, *args, **kwargs) -> Any:
+        try:
+            if isinstance(value, bytearray):
+                return value.decode('utf-8').strip()[:self.length]
+            if isinstance(value, str):
+                return value.strip()[:self.length]
+        except (ValueError, TypeError, StructError, OverflowError, UnicodeDecodeError):
+            pass
+        self._raise_value_error(value)
+
+    def get_bytes_array(self, value: Any, *args, **kwargs) -> bytearray:
+        try:
+            value_str: str = str(value)
+            encoded: bytes = value_str.encode('utf-8')[:self.length]
+            if len(encoded) < self.length:
+                encoded += b'\x20' * (self.length - len(encoded))
+            return bytearray(encoded)
+        except (ValueError, TypeError, StructError, OverflowError):
+            pass
+        self._raise_value_error(value)
 
 
 @PLCVarTypesReg.register(name= 'STRING')

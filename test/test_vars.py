@@ -129,7 +129,7 @@ class TestPLCVar:
         return PLCVar(
             name= 'test',
             offset= PLCMemoryOffset((0, 0)),
-            var_type= PLCBoolType,
+            var_type= PLCBoolType(),
             rw= PLCReadWrite.READ,
             value= None
         )
@@ -185,8 +185,8 @@ class TestPLCVar:
     @mark.parametrize(
         'var_type, expected',
         [
-            (PLCIntType, PLCIntType),
-            ('word', PLCWordType),
+            (PLCIntType(), PLCIntType()),
+            ('word', PLCWordType()),
         ]
     )
     def test_validate_var_type(
@@ -250,21 +250,23 @@ class TestPLCVar:
 
     def test_validate_value_none(self, default_var: PLCVar) -> None:
         for var_type in PLCVarTypesReg.list():
-            default_var.var_type = PLCVarTypesReg.get(var_type)
+            var_type_obj: Optional[PLCVarType] = PLCVarTypesReg.get(var_type)
+            if var_type_obj is None:
+                assert False
+            default_var.var_type = var_type_obj
             default_var.value = None
             assert default_var.value == None
 
     @mark.parametrize(
         'value, var_type, result',
         [
-            #(12, PLCVarTypesReg.get('usint'), 12),
-            ('12', PLCVarTypesReg.get('usint'), 12),
+            ('12', PLCUSIntType(), 12),
         ]
     )  #TODO: create more tests
     def test_validate_value(
         self,
         value: Any,
-        var_type: type[PLCVarType],
+        var_type: PLCVarType,
         result: Any,
         default_var: PLCVar
     ) -> None:
@@ -281,14 +283,14 @@ class TestPLCVar:
     @mark.parametrize(
         'value, var_type',
         [
-            (-12, PLCVarTypesReg.get('usint')),
-            ('-12', PLCVarTypesReg.get('usint')),
+            (-12, PLCUSIntType()),
+            ('-12', PLCUSIntType()),
         ]
     )  #TODO: create more tests
-    def test_validate_valueErrors(
+    def test_validate_value_errors(
         self,
         value: Any,
-        var_type: type[PLCVarType],
+        var_type: PLCVarType,
         default_var: PLCVar
     ) -> None:
         default_var.var_type = var_type
@@ -307,7 +309,7 @@ class TestPLCVar:
                 },
                 'test',
                 PLCMemoryOffset('2.1'),
-                PLCVarTypesReg.get('INT'),
+                PLCIntType(),
                 PLCReadWrite.validate('REad')
             )
         ]
@@ -332,7 +334,7 @@ class TestPLCVar:
             PLCVar(
                 name= 'test',
                 offset= PLCMemoryOffset((0, 0)),
-                var_type= PLCBoolType,
+                var_type= PLCBoolType(),
                 rw= PLCReadWrite.READ,
                 value= None
             ),
@@ -343,15 +345,6 @@ class TestPLCVar:
         assert comp == default_var
         assert default_var == comp
 
-    def test_bytes_size(self, default_var: PLCVar) -> None:
-        for type_class in PLCVarTypesReg.list():
-            var_type: type[PLCVarType] = PLCVarTypesReg.get(type_class)
-            default_var.var_type = var_type
-            if var_type.BYTES == 0:
-                expected: int = 1
-            else:
-                expected: int = var_type.BYTES
-            assert default_var.bytes_size == expected
 
 class TestPLCVarDict():
     @fixture
@@ -360,7 +353,7 @@ class TestPLCVarDict():
         return PLCVar(
             name= 'test',
             offset= PLCMemoryOffset((0, 0)),
-            var_type= PLCBoolType,
+            var_type= PLCBoolType(),
             rw= PLCReadWrite.READ,
             value= None
         )

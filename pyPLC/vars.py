@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from enum import IntEnum, unique
+from enum import IntEnum
 from re import match
 from typing import Any, Optional
 
@@ -12,10 +12,12 @@ from .logs import pyplc_logger
 from .var_types import PLCVarType, PLCVarTypesReg
 
 
-@unique
 class PLCReadWrite(IntEnum):
+    RW = 0
+    READWRITE = 0
     READ_WRITE = 0
     READ = 1
+    R = 1
 
     @classmethod
     def validate(cls, value: str | int | Self) -> Self:

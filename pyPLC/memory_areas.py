@@ -47,7 +47,7 @@ class PLCMemoryArea(BaseModel, ABC):
             if isinstance(var, str):
                 var = self.vars[var]
             return self.vars[var.name].value
-        except ValueError:
+        except (ValueError, KeyError):
             msg: str = f'{self}: {var} not found in variables.'
             pyplc_logger.error(msg)
             raise ValueError(msg)
@@ -85,7 +85,7 @@ class PLCMemoryArea(BaseModel, ABC):
         results: list[int] = [self._write_var(var, client) for var in self.vars.values()]
         if PLCComResult.NOT_CONNECTED in results:
             return PLCComResult.NOT_CONNECTED
-        pyplc_logger.debug(f'{self} writed.', Styles.SUCCEED)
+        pyplc_logger.debug(f'{self} writed.')
         return PLCComResult.SUCCESS
 
     @abstractmethod
@@ -97,7 +97,7 @@ class PLCMemoryArea(BaseModel, ABC):
             if isinstance(var, str):
                 var = self.vars[var]
             self.vars[var.name].value = value
-            pyplc_logger.debug(f'{self}: {self.vars[var.name]} setted.', Styles.SUCCEED)
+            pyplc_logger.debug(f'{self}: {self.vars[var.name]} setted.')
         except KeyError:
             msg: str = f'{self}.{var} not found in variables.'
             pyplc_logger.error(msg)
@@ -114,8 +114,6 @@ class PLCMemoryArea(BaseModel, ABC):
                 var = self.vars[var]
             self.vars[var.name].value = value
             result: PLCComResult = self._write_var(self.vars[var.name], client)
-            if not result.is_error():
-                pyplc_logger.debug(f'{self}.{self.vars[var.name]} writed.')
             return (result, value)
         except KeyError:
             msg: str = f'{self}.{var} not found in variables.'
@@ -164,20 +162,20 @@ class PLCInputs(PLCMemoryArea):
         if len(error_vars) > 0:
             pyplc_logger.warning(f'Unable to read {error_vars}.')
             return PLCComResult.UNCOMPLETED
-        pyplc_logger.debug(f'{self} readed.', Styles.SUCCEED)
+        pyplc_logger.debug(f'{self} readed.')
         return PLCComResult.SUCCESS
 
     def _read_var(self, var: PLCVar, client: Client) -> bytearray:
         return client.eb_read(var.offset.bytes_offset, var.bytes_size)
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
-        if var.rw not in (PLCReadWrite.READ_WRITE,):
+        if var.rw not in (PLCReadWrite.READWRITE,):
             pyplc_logger.warning(f'{self}.{var} is a read only var.')
             return PLCComResult.READ_ONLY
         try:
             value: bytearray = var.get_bytes_array()
             client.eb_write(var.offset.bytes_offset, var.bytes_size, value)
-            pyplc_logger.debug(f'{self}.{var} writed.', Styles.SUCCEED)
+            pyplc_logger.debug(f'{self}.{var} writed. value="{var.value}".')
             return PLCComResult.SUCCESS
         except (ValueError, TypeError) as e:
             pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
@@ -227,20 +225,20 @@ class PLCOutputs(PLCMemoryArea):
         if len(error_vars) > 0:
             pyplc_logger.warning(f'Unable to read {error_vars}.')
             return PLCComResult.UNCOMPLETED
-        pyplc_logger.debug(f'{self} readed.', Styles.SUCCEED)
+        pyplc_logger.debug(f'{self} readed.')
         return PLCComResult.SUCCESS
 
     def _read_var(self, var: PLCVar, client: Client) -> bytearray:
         return client.ab_read(var.offset.bytes_offset, var.bytes_size)
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
-        if var.rw not in (PLCReadWrite.READ_WRITE,):
+        if var.rw not in (PLCReadWrite.READWRITE,):
             pyplc_logger.warning(f'{self}.{var} is a read only var')
             return PLCComResult.READ_ONLY
         try:
             value: Optional[bytearray] = var.get_bytes_array()
             client.ab_write(var.offset.bytes_offset, value)
-            pyplc_logger.debug(f'{self}.{var} writed.', Styles.SUCCEED)
+            pyplc_logger.debug(f'{self}.{var} writed. value="{var.value}".')
             return PLCComResult.SUCCESS
         except (ValueError, TypeError) as e:
             pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
@@ -290,20 +288,20 @@ class PLCMarks(PLCMemoryArea):
         if len(error_vars) > 0:
             pyplc_logger.warning(f'Unable to read {error_vars}.')
             return PLCComResult.UNCOMPLETED
-        pyplc_logger.debug(f'{self} readed.', Styles.SUCCEED)
+        pyplc_logger.debug(f'{self} readed.')
         return PLCComResult.SUCCESS
 
     def _read_var(self, var: PLCVar, client: Client) -> bytearray:
         return client.mb_read(var.offset.bytes_offset, var.bytes_size)
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
-        if var.rw not in (PLCReadWrite.READ_WRITE,):
+        if var.rw not in (PLCReadWrite.READWRITE,):
             pyplc_logger.warning(f'{self}.{var} is a read only var.')
             return PLCComResult.READ_ONLY
         try:
             value: Optional[bytearray] = var.get_bytes_array()
             client.mb_write(var.offset.bytes_offset, var.bytes_size, value)
-            pyplc_logger.debug(f'{self}.{var} writed.', Styles.SUCCEED)
+            pyplc_logger.debug(f'{self}.{var} writed. value="{var.value}".')
             return PLCComResult.SUCCESS
         except (ValueError, TypeError) as e:
             pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')
@@ -375,20 +373,20 @@ class PLCDB(PLCMemoryArea):
         if len(error_vars) > 0:
             pyplc_logger.warning(f'Unable to read {error_vars}.')
             return PLCComResult.UNCOMPLETED
-        pyplc_logger.debug(f'{self} readed.', Styles.SUCCEED)
+        pyplc_logger.debug(f'{self} readed.')
         return PLCComResult.SUCCESS
 
     def _read_var(self, var: PLCVar, client: Client) -> bytearray:
         return client.db_read(self.number, var.offset.bytes_offset, var.bytes_size)
 
     def _write_var(self, var: PLCVar, client: Client) -> PLCComResult:
-        if var.rw not in (PLCReadWrite.READ_WRITE,):
+        if var.rw not in (PLCReadWrite.READWRITE,):
             pyplc_logger.warning(f'{self}.{var} is a read only var')
             return PLCComResult.READ_ONLY
         try:
             value: Optional[bytearray] = var.get_bytes_array()
             client.db_write(self.number, var.offset.bytes_offset, value)
-            pyplc_logger.debug(f'{self}.{var} writed.', Styles.SUCCEED)
+            pyplc_logger.debug(f'{self}.{var} writed. value="{var.value}".')
             return PLCComResult.SUCCESS
         except (TypeError, TypeError) as e:
             pyplc_logger.error(f'Can\'t write {self}.{var}. {e}.')

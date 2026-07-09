@@ -155,7 +155,7 @@ class PLCManager(BaseModel):
                 slot= self.slot,
                 tcp_port= self.port
             )
-            pyplc_logger.debug(f'{self}: PLC connected.', Styles.SUCCEED)
+            pyplc_logger.info(f'{self}: PLC connected.')
             return PLCComResult.SUCCESS
         except Exception as e:
             pyplc_logger.error(f'{self}: Connection failed. {e}')
@@ -218,7 +218,7 @@ class PLCManager(BaseModel):
 
     def read_dbs(self, dbs: Optional[Iterable[int | PLCDB]] = None) -> PLCComResult:
         if not self.is_connected():
-            if not self.connect().is_error():
+            if self.connect().is_error():
                 return PLCComResult.NOT_CONNECTED
         if dbs is None:
             dbs = tuple(self.dbs.keys())
@@ -334,6 +334,7 @@ class PLCManager(BaseModel):
             if area is not None and plc_area != area:
                 continue
             ret: PLCComResult
+            res_value: Any
             ret, res_value = plc_area.write_var(
                 var= var,
                 value= value,

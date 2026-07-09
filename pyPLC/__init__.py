@@ -5,7 +5,7 @@ from .logs import Styles, pyplc_logger
 from .manager import PLCManager
 from .memory_areas import (PLCDB, PLCInputs, PLCMarks, PLCMemoryArea,
                            PLCOutputs, PLCReadWrite, PLCVarDict)
-from .structures import PLCClientErrors, PLCComResult
+from .structures import PLCClientErrors, PLCComResult, PLCConnType
 from .var_types import PLCVarType, PLCVarTypesReg
 from .vars import PLCMemoryOffset, PLCReadWrite, PLCVar
 

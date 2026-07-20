@@ -683,7 +683,7 @@ class PLCArrayOfChar(PLCVarType):
     def validate_value(self, value: Any, *args, **kwargs) -> Any:
         try:
             if isinstance(value, bytearray):
-                return value.decode('utf-8').strip()[:self.length]
+                return value.decode('utf-8').strip('\x00').strip()[:self.length]
             if isinstance(value, str):
                 return value.strip()[:self.length]
         except (ValueError, TypeError, StructError, OverflowError, UnicodeDecodeError):

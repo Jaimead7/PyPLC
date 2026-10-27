@@ -164,7 +164,7 @@ class PLCManager(BaseModel):
     def disconnect(self) -> PLCComResult:
         try:
             self._client.disconnect()
-            pyplc_logger.debug(f'{self}: PLC disconnected.')
+            pyplc_logger.info(f'{self}: PLC disconnected.')
             return PLCComResult.SUCCESS
         except Exception as e:
             pyplc_logger.error(f'{self}: Disconnection failed. {e}.')
